@@ -131,8 +131,14 @@ export default function LoginPage() {
             </Button>
           </div>
           
-          <div className="text-center text-sm text-gray-500 mt-4">
-            <p>Demo credentials: admin / password</p>
+          <div className="text-center text-sm mt-4">
+            <p className="text-gray-500 mb-2">Don't have an account?</p>
+            <a 
+              href="/register" 
+              className="text-blue-600 hover:text-blue-800 font-medium px-4 py-2 border border-blue-300 rounded-md inline-block"
+            >
+              Register Now
+            </a>
           </div>
         </form>
       </div>
