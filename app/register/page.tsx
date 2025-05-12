@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -47,6 +48,20 @@ export default function RegisterPage() {
       setError("Password must be at least 6 characters");
       return;
     }
+
+    // Validate phone number
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(formData.phone)) {
+      setError("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
     
     try {
       setLoading(true);
@@ -68,14 +83,15 @@ export default function RegisterPage() {
         full_name: formData.full_name,
         email: formData.email,
         phone: formData.phone,
-        password: formData.password, // In a real app, hash this password!
+        password: formData.password, // Note: In production, use proper password hashing
         gender: formData.gender,
         date_of_birth: formData.date_of_birth || null,
         address: formData.address || null,
         city: formData.city || null,
         state: formData.state || null,
         pincode: formData.pincode || null,
-        is_verified: false
+        is_verified: false,
+        registered_at: new Date().toISOString()
       };
       
       // Insert user data
@@ -88,6 +104,12 @@ export default function RegisterPage() {
         throw error;
       }
       
+      // Show success message
+      toast({
+        title: "Registration successful!",
+        description: "You can now login to your account.",
+      });
+      
       setSuccess("Registration successful! You can now login.");
       
       // Redirect to login page after 2 seconds
@@ -98,6 +120,13 @@ export default function RegisterPage() {
     } catch (error: any) {
       console.error("Registration error:", error);
       setError(error.message || "An error occurred during registration");
+      
+      // Show error toast
+      toast({
+        title: "Registration failed",
+        description: error.message || "An error occurred during registration",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

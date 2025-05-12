@@ -20,6 +20,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
+  // List of public routes that don't require authentication
+  const publicRoutes = ['/login', '/register']
+
   useEffect(() => {
     // On initial load, check if user is logged in
     const checkLoginStatus = () => {
@@ -30,8 +33,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       setUsername(storedUsername)
       setIsLoading(false)
       
-      // If not logged in and not already on login page, redirect to login
-      if (!loggedIn && pathname !== "/login") {
+      // If not logged in and not on a public route, redirect to login
+      if (!loggedIn && !publicRoutes.includes(pathname)) {
         router.push("/login")
       }
     }
@@ -60,54 +63,37 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     return null
   }
   
-  // If not logged in and not on login page, don't render anything
-  if (!isLoggedIn && pathname !== "/login") {
+  // If not logged in and not on a public route, don't render anything
+  if (!isLoggedIn && !publicRoutes.includes(pathname)) {
     return null
   }
 
-  // Don't show the sidebar or header on the login page
-  if (pathname === "/login") {
+  // For public routes (login/register), just render the children without the sidebar
+  if (!isLoggedIn && publicRoutes.includes(pathname)) {
     return (
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-        {children}
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <ToastProvider>
+          {children}
           <ToastViewport />
+          <Toaster />
         </ToastProvider>
-        <Toaster />
       </ThemeProvider>
     )
   }
-
+  
+  // For authenticated routes, render with sidebar
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <div className="flex h-screen">
-        <Sidebar />
-        <div className="flex-1 overflow-auto">
-          {/* Add user info and logout button in header */}
-          <header className="bg-white border-b border-gray-200 px-4 py-2 flex justify-end items-center">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 text-sm text-gray-700">
-                <User className="h-4 w-4" />
-                <span>{username}</span>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleLogout}
-                className="flex items-center gap-1 text-gray-700 hover:text-red-600"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </Button>
-            </div>
-          </header>
-          {children}
-        </div>
-      </div>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <ToastProvider>
+        <div className="flex h-screen">
+          <Sidebar />
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+        </div>
         <ToastViewport />
+        <Toaster />
       </ToastProvider>
-      <Toaster />
     </ThemeProvider>
   )
 } 
