@@ -22,8 +22,8 @@ A comprehensive hospital management system for ESIC hospitals that helps manage 
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/your-username/esic-management.git
-   cd esic-management
+   git clone https://github.com/chatgptnotes/adamrit.in.git
+   cd adamrit.in
    ```
 
 2. Install dependencies
@@ -72,6 +72,12 @@ This project uses [Supabase](https://supabase.com/) as its database. Follow thes
    ```
 
 7. Restart your development server
+
+### Current Supabase Connection
+
+The project is currently connected to Supabase with the following configuration:
+- **Project URL**: https://jtlbkmwwaivkqlwqdryb.supabase.co
+- **Environment**: The connection details are stored in `.env.local` (not tracked in git for security)
 
 ## Project Structure
 
