@@ -1,53 +1,70 @@
 "use client"
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ActivitySquare, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const [credentials, setCredentials] = useState({
+    email: '',
+    password: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Check if user is already logged in
-    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-    if (isLoggedIn) {
-      router.push("/");
-    }
-  }, [router]);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setCredentials(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
+    setError(null);
     
-    // Simple validation
-    if (!username || !password) {
-      setError("Please enter both username and password.");
-      setIsLoading(false);
-      return;
-    }
-    
-    // Simulate API call with timeout
-    setTimeout(() => {
-      // Demo credentials (in a real app, this would be validated by your backend)
-      if (username === "admin" && password === "password") {
-        // Store login state in localStorage
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("username", username);
-        
-        // Redirect to dashboard
-        router.push("/");
-      } else {
-        setError("Invalid username or password. Try admin/password");
+    try {
+      setLoading(true);
+      
+      // Check if user exists with provided email and password
+      const { data, error } = await supabase
+        .from('user_register')
+        .select('*')
+        .eq('email', credentials.email)
+        .eq('password', credentials.password)  // In a real app, use proper password hashing!
+        .single();
+      
+      if (error || !data) {
+        setError("Invalid email or password");
+        return;
       }
-      setIsLoading(false);
-    }, 1000);
+      
+      // In a real app, you would now set a session or token
+      // For simplicity, we'll just redirect to the home page
+      
+      // Store user info in localStorage
+      localStorage.setItem('user', JSON.stringify({
+        id: data.id,
+        full_name: data.full_name,
+        email: data.email,
+        is_verified: data.is_verified
+      }));
+      
+      // Redirect to home page
+      router.push('/');
+      
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setError(error.message || "An error occurred during login");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -61,7 +78,7 @@ export default function LoginPage() {
           <p className="text-gray-500 mt-2">Hospital Management System</p>
         </div>
         
-        <form onSubmit={handleLogin} className="bg-white p-8 rounded-lg shadow-md space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md space-y-6">
           <h2 className="text-2xl font-semibold text-center text-gray-800 mb-6">Login to your account</h2>
           
           {error && (
@@ -71,14 +88,15 @@ export default function LoginPage() {
           )}
           
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Username</label>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
             <Input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              type="email"
+              name="email"
+              value={credentials.email}
+              onChange={handleChange}
+              placeholder="Enter your email"
               className="w-full"
-              disabled={isLoading}
+              disabled={loading}
               autoFocus
             />
           </div>
@@ -87,11 +105,12 @@ export default function LoginPage() {
             <label className="block text-sm font-medium text-gray-700">Password</label>
             <Input
               type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
+              name="password"
+              value={credentials.password}
+              onChange={handleChange}
               placeholder="Enter your password"
               className="w-full"
-              disabled={isLoading}
+              disabled={loading}
             />
           </div>
           
@@ -99,9 +118,9 @@ export default function LoginPage() {
             <Button 
               type="submit" 
               className="w-full flex items-center justify-center" 
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Logging in...
