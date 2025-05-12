@@ -32,6 +32,12 @@ export default function RegisterPage() {
     }));
   };
 
+  const handleLoginClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // Use window.location for more reliable navigation
+    window.location.href = "/login";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -51,15 +57,28 @@ export default function RegisterPage() {
     try {
       setLoading(true);
       
-      // First check if user already exists
-      const { data: existingUser, error: checkError } = await supabase
+      // Check if user already exists
+      const { data: existingUserEmail } = await supabase
         .from('user_register')
         .select('id')
-        .or(`email.eq.${formData.email},phone.eq.${formData.phone}`)
-        .single();
+        .eq('email', formData.email)
+        .maybeSingle();
+
+      const { data: existingUserPhone } = await supabase
+        .from('user_register')
+        .select('id')
+        .eq('phone', formData.phone)
+        .maybeSingle();
       
-      if (existingUser) {
-        setError("User with this email or phone already exists");
+      if (existingUserEmail) {
+        setError("A user with this email already exists");
+        setLoading(false);
+        return;
+      }
+
+      if (existingUserPhone) {
+        setError("A user with this phone number already exists");
+        setLoading(false);
         return;
       }
       
@@ -81,8 +100,7 @@ export default function RegisterPage() {
       // Insert user data
       const { data, error } = await supabase
         .from('user_register')
-        .insert([userData])
-        .select();
+        .insert([userData]);
       
       if (error) {
         throw error;
@@ -90,10 +108,10 @@ export default function RegisterPage() {
       
       setSuccess("Registration successful! You can now login.");
       
-      // Redirect to login page after 2 seconds
+      // Redirect to login page after 3 seconds
       setTimeout(() => {
-        router.push('/login');
-      }, 2000);
+        window.location.href = "/login";
+      }, 3000);
       
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -111,9 +129,13 @@ export default function RegisterPage() {
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+          <a 
+            href="/login" 
+            onClick={handleLoginClick}
+            className="font-medium text-blue-600 hover:text-blue-500"
+          >
             Sign in
-          </Link>
+          </a>
         </p>
       </div>
 
