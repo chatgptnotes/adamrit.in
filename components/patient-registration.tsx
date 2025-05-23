@@ -1,71 +1,69 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { toast } from "@/components/ui/use-toast"
+import { X } from "lucide-react"
 
-export function PatientRegistration({ onClose }: { onClose: () => void }) {
+interface PatientRegistrationProps {
+  onClose: () => void;
+  onSubmit: (data: any) => Promise<void>;
+}
+
+export function PatientRegistration({ onClose, onSubmit }: PatientRegistrationProps) {
   const [form, setForm] = useState({
       name: "",
       age: "",
     gender: "",
       phone: "",
       address: "",
-    emergencyContactName: "",
-    emergencyContactMobile: "",
-    secondEmergencyContactName: "",
-    secondEmergencyContactMobile: "",
+    emergency_contact_name: "",
+    emergency_contact_mobile: "",
+    second_emergency_contact_name: "",
+    second_emergency_contact_mobile: "",
     dob: "",
-    photo: null as any,
+    photo_url: null as any,
     passport: "",
     ward: "",
     panchayat: "",
-    relationshipManager: "",
+    relationship_manager: "",
     quarter: "",
     pin: "",
     state: "",
     city: "",
     nationality: "Indian",
     mobile: "",
-    homePhone: "",
-    tempReg: false,
-    consultantOwn: false,
-    bloodGroup: "",
+    home_phone: "",
+    temp_reg: false,
+    consultant_own: false,
+    blood_group: "",
     spouse: "",
     allergies: "",
-    relativePhone: "",
+    relative_phone: "",
     instructions: "",
-    identityType: "",
+    identity_type: "",
       email: "",
     fax: "",
-    privilegeCard: "",
-    billingLink: "",
-    referralLetter: null as any,
+    privilege_card: "",
+    billing_link: "",
+    referral_letter_url: null as any,
     diagnosis: "",
     surgery: "",
     corporate: "",
-    registrationDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-    insuranceStatus: "Active",
+    registration_date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+    insurance_status: "Active",
     referee: "",
-    type: ""
+    type: "",
+    insurance_person_no: ""
   });
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real application, this would save to a database
-    console.log(form);
-    
-    toast({
-      title: "Patient registered successfully",
-      description: `Patient information saved`,
-    });
-    
-    // Close the form
-    onClose();
-  }
+    await onSubmit(form);
+  };
 
   return (
     <div className="max-w-full min-w-[1200px] w-auto">
-      <h3 className="text-3xl font-bold mb-1 text-blue-900">New Patient Registration</h3>
+      <h3 className="text-3xl font-bold mb-1 text-blue-900">Insurance Person No.</h3>
       <p className="mb-4 text-gray-500">Register a new patient in the ESIC system</p>
             
       <form onSubmit={handleSubmit}>
@@ -90,15 +88,39 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition" 
                 required
                 value={form.corporate}
-                onChange={e => setForm({ ...form, corporate: e.target.value })}
+                onChange={e => {
+                  const value = e.target.value;
+                  setForm({
+                    ...form,
+                    corporate: value,
+                    insurance_person_no: value === "ESIC" ? form.insurance_person_no : ""
+                  });
+                }}
               >
                 <option value="">Select Corporate</option>
                 <option value="WCL">WCL</option>
                 <option value="ESIC">ESIC</option>
                 <option value="CGHS">CGHS</option>
                 <option value="MPKAY">MPKAY</option>
+                <option value="Central Railway">Central Railway</option>
+                <option value="ECHS">ECHS</option>
+                <option value="SECR">SECR</option>
                 <option value="OTHER">OTHER</option>
               </select>
+
+              {form.corporate === 'ESIC' && (
+                <div className="mt-2">
+                  <label>Insurance Person No.</label>
+                  <input
+                    type="text"
+                    placeholder="Enter ESIC Number"
+                    className="border rounded px-2 py-1 w-full"
+                    value={form.insurance_person_no}
+                    onChange={e => setForm({ ...form, insurance_person_no: e.target.value })}
+                    required
+                  />
+                </div>
+              )}
                   </div>
             
                   <div>
@@ -111,6 +133,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, age: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Gender *</label>
               <select 
@@ -125,6 +148,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 <option value="Other">Other</option>
               </select>
                   </div>
+
                   <div>
               <label>Phone *</label>
               <input 
@@ -135,6 +159,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, phone: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Address *</label>
               <input 
@@ -145,44 +170,49 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, address: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Emergency Contact Name *</label>
               <input 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 placeholder-gray-400 transition" 
                 required 
                 placeholder="Emergency Contact Name" 
-                value={form.emergencyContactName} 
-                onChange={e => setForm({ ...form, emergencyContactName: e.target.value })} 
+                value={form.emergency_contact_name} 
+                onChange={e => setForm({ ...form, emergency_contact_name: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Emergency Contact Mobile *</label>
               <input 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 placeholder-gray-400 transition" 
                 required 
                 placeholder="Mobile Number" 
-                value={form.emergencyContactMobile} 
-                onChange={e => setForm({ ...form, emergencyContactMobile: e.target.value })} 
+                value={form.emergency_contact_mobile} 
+                onChange={e => setForm({ ...form, emergency_contact_mobile: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Second Emergency Contact Name</label>
               <input 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 placeholder-gray-400 transition" 
                 placeholder="Second Emergency Contact Name" 
-                value={form.secondEmergencyContactName} 
-                onChange={e => setForm({ ...form, secondEmergencyContactName: e.target.value })} 
+                value={form.second_emergency_contact_name} 
+                onChange={e => setForm({ ...form, second_emergency_contact_name: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Second Emergency Contact Mobile</label>
               <input 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 placeholder-gray-400 transition" 
                 placeholder="Mobile Number" 
-                value={form.secondEmergencyContactMobile} 
-                onChange={e => setForm({ ...form, secondEmergencyContactMobile: e.target.value })} 
+                value={form.second_emergency_contact_mobile} 
+                onChange={e => setForm({ ...form, second_emergency_contact_mobile: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Date of Birth</label>
               <input 
@@ -192,14 +222,16 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, dob: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Patient's Photo</label>
               <input 
                 type="file" 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition" 
-                onChange={e => setForm({ ...form, photo: e.target.files?.[0] || null })} 
+                onChange={e => setForm({ ...form, photo_url: e.target.files?.[0] || null })} 
               />
                   </div>
+
                   <div>
               <label>Aadhar/Passport</label>
               <input 
@@ -209,6 +241,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, passport: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Quarter/Plot No.</label>
               <input 
@@ -218,6 +251,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, quarter: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Ward</label>
               <input 
@@ -227,6 +261,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, ward: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Panchayat</label>
               <input 
@@ -236,15 +271,17 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, panchayat: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Relationship Manager</label>
               <input 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 placeholder-gray-400 transition" 
                 placeholder="Relationship Manager" 
-                value={form.relationshipManager} 
-                onChange={e => setForm({ ...form, relationshipManager: e.target.value })} 
+                value={form.relationship_manager} 
+                onChange={e => setForm({ ...form, relationship_manager: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Pin Code</label>
               <input 
@@ -254,6 +291,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, pin: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>State</label>
               <input 
@@ -263,6 +301,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, state: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>City/Town</label>
               <input 
@@ -283,8 +322,8 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
               <label>Blood Group</label>
               <select 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition" 
-                value={form.bloodGroup} 
-                onChange={e => setForm({ ...form, bloodGroup: e.target.value })}
+                value={form.blood_group} 
+                onChange={e => setForm({ ...form, blood_group: e.target.value })}
               >
                 <option value="">Select Blood Group</option>
                 <option value="A+">A+</option>
@@ -297,6 +336,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 <option value="O-">O-</option>
               </select>
                   </div>
+
                   <div>
               <label>Spouse Name</label>
               <input 
@@ -306,6 +346,7 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, spouse: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Allergies</label>
               <input 
@@ -315,15 +356,17 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, allergies: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Relative Phone No.</label>
               <input 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 placeholder-gray-400 transition" 
                 placeholder="Relative Phone No." 
-                value={form.relativePhone} 
-                onChange={e => setForm({ ...form, relativePhone: e.target.value })} 
+                value={form.relative_phone} 
+                onChange={e => setForm({ ...form, relative_phone: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Instructions</label>
               <input 
@@ -333,15 +376,17 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, instructions: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Identity Type</label>
               <input 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 placeholder-gray-400 transition" 
                 placeholder="Identity Type" 
-                value={form.identityType} 
-                onChange={e => setForm({ ...form, identityType: e.target.value })} 
+                value={form.identity_type} 
+                onChange={e => setForm({ ...form, identity_type: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Email</label>
               <input 
@@ -351,30 +396,33 @@ export function PatientRegistration({ onClose }: { onClose: () => void }) {
                 onChange={e => setForm({ ...form, email: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Privilege Card Number</label>
               <input 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 placeholder-gray-400 transition" 
                 placeholder="Privilege Card Number" 
-                value={form.privilegeCard} 
-                onChange={e => setForm({ ...form, privilegeCard: e.target.value })} 
+                value={form.privilege_card} 
+                onChange={e => setForm({ ...form, privilege_card: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Billing Link</label>
               <input 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 placeholder-gray-400 transition" 
                 placeholder="Billing Link" 
-                value={form.billingLink} 
-                onChange={e => setForm({ ...form, billingLink: e.target.value })} 
+                value={form.billing_link} 
+                onChange={e => setForm({ ...form, billing_link: e.target.value })} 
               />
                   </div>
+
                   <div>
               <label>Referral Letter</label>
               <input 
                 type="file" 
                 className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition" 
-                onChange={e => setForm({ ...form, referralLetter: e.target.files?.[0] || null })} 
+                onChange={e => setForm({ ...form, referral_letter_url: e.target.files?.[0] || null })} 
               />
                   </div>
                 </div>

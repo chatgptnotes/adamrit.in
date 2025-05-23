@@ -1,86 +1,171 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "@/components/ui/use-toast";
-import { CalendarPlus, Plus, X, Search } from "lucide-react";
+import { CalendarPlus, Plus, X, Search, Eye } from "lucide-react";
 import { PatientRegistration } from "./patient-registration";
-
-const mockPatients = [
-  {
-    id: "ESIC-2023-1001",
-    name: "Rahul Sharma",
-    age: 42,
-    gender: "Male",
-    diagnosis: "Type 2 Diabetes Mellitus",
-    surgery: "Cataract Surgery",
-    approvalStatus: "Approved",
-    registrationDate: "15 Jan 2023",
-    insuranceStatus: "Active",
-    referee: "Dr. Neha Patel",
-  },
-  {
-    id: "ESIC-2023-1002",
-    name: "Amit Verma",
-    age: 35,
-    gender: "Male",
-    diagnosis: "Hypertension",
-    surgery: "Appendectomy",
-    approvalStatus: "Pending",
-    registrationDate: "20 Feb 2023",
-    insuranceStatus: "Active",
-    referee: "Dr. Vikram Singh",
-  },
-  {
-    id: "ESIC-2023-1003",
-    name: "Suman Gupta",
-    age: 29,
-    gender: "Female",
-    diagnosis: "Coronary Artery Disease",
-    surgery: "Coronary Angioplasty",
-    approvalStatus: "Rejected",
-    registrationDate: "10 Mar 2023",
-    insuranceStatus: "Expired",
-    referee: "Dr. Anjali Gupta",
-  },
-];
-
-// Mock data for surgeries with CGHS codes and categories
-const mockSurgeryList = [
-  { name: "Arthroscopic Knee Surgery", code: "CGHS: 330025", category: "Orthopedic" },
-  { name: "Hernia Repair", code: "CGHS: 180025", category: "General Surgery" },
-  { name: "Appendectomy", code: "CGHS: 180010", category: "General Surgery" },
-  { name: "Hemorrhoidectomy", code: "CGHS: 180040", category: "General Surgery" },
-  { name: "Tonsillectomy", code: "CGHS: 210030", category: "ENT" },
-  { name: "Cataract Surgery", code: "CGHS: 220010", category: "Ophthalmology" },
-  { name: "Coronary Angioplasty", code: "CGHS: 310050", category: "Cardiology" },
-  { name: "Hysterectomy", code: "CGHS: 250020", category: "Gynecology" },
-  { name: "Cholecystectomy", code: "CGHS: 180030", category: "General Surgery" },
-  { name: "Hip Replacement", code: "CGHS: 330040", category: "Orthopedic" },
-];
-
-// Mock data for diagnoses
-const mockDiagnosesList = [
-  { name: "Hypertension", code: "I10" },
-  { name: "Type 2 Diabetes Mellitus", code: "E11" },
-  { name: "Coronary Artery Disease", code: "I25.10" },
-  { name: "Osteoarthritis", code: "M19" },
-  { name: "Asthma", code: "J45" },
-  { name: "COPD", code: "J44" },
-  { name: "Gastritis", code: "K29" },
-  { name: "Migraine", code: "G43" },
-  { name: "Hypothyroidism", code: "E03" },
-  { name: "Pneumonia", code: "J18" },
-];
+import { supabase } from "@/lib/supabase/client";
 
 export function PatientRegistryList() {
   const [showAddPatient, setShowAddPatient] = useState(false);
   const [showVisitForm, setShowVisitForm] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  const [patients, setPatients] = useState(mockPatients);
-  
+  const [patients, setPatients] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<{ dr_id: string, name: string }[]>([]);
+  const [referringDoctors, setReferringDoctors] = useState<{ dr_id: string, name: string }[]>([]);
+  const [diagnosesList, setDiagnosesList] = useState<{ id: string, name: string, diagnosis_id: string }[]>([]);
+  const [surgeons, setSurgeons] = useState<{ dr_id: string }[]>([]);
+  const [surgeryList, setSurgeryList] = useState<{ dr_id: string, name: string }[]>([]);
+  const [selectedSurgeonId, setSelectedSurgeonId] = useState("");
+  const [latestVisit, setLatestVisit] = useState(null);
+
+  // Fetch patients from Supabase
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  const fetchDoctors = async () => {
+    const { data, error } = await supabase
+      .from('doctor')
+      .select('dr_id, name');
+    if (data) setDoctors(data);
+  };
+
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
+
+  useEffect(() => {
+    const fetchSurgeons = async () => {
+      const { data, error } = await supabase
+        .from('doctor')
+        .select('dr_id')
+        .eq('is_surgeon', true);
+      if (data) setSurgeons(data);
+    };
+    fetchSurgeons();
+  }, []);
+
+  useEffect(() => {
+    const fetchSurgeries = async () => {
+      const { data, error } = await supabase
+        .from('doctor')
+        .select('dr_id, name')
+        .eq('is_surgeon', true);
+      if (data) setSurgeryList(data);
+    };
+    fetchSurgeries();
+  }, []);
+
+  useEffect(() => {
+    const fetchDiagnoses = async () => {
+      const { data, error } = await supabase.from('diagnosis').select('id, name, diagnosis_id');
+      if (data) setDiagnosesList(data);
+    };
+    fetchDiagnoses();
+  }, []);
+
+  useEffect(() => {
+    fetchReferringDoctors();
+  }, []);
+
+  const fetchReferringDoctors = async () => {
+    const { data, error } = await supabase
+      .from('doctor')
+      .select('dr_id, name')
+      .eq('is_referring', true);
+    if (data) setReferringDoctors(data);
+  };
+
+  const fetchPatients = async () => {
+    const { data, error } = await supabase
+      .from('patients')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch patients",
+        variant: "destructive"
+      });
+    } else {
+      setPatients(data || []);
+    }
+  };
+
+  // Add new patient
+  const handleAddPatient = async (patientData: any) => {
+    const { data, error } = await supabase
+      .from('patients')
+      .insert([patientData])
+      .select();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add patient",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Patient added successfully"
+      });
+      fetchPatients();
+      setShowAddPatient(false);
+    }
+  };
+
+  // Update patient
+  const handleUpdatePatient = async (id: string, patientData: any) => {
+    const { error } = await supabase
+      .from('patients')
+      .update(patientData)
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update patient",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Patient updated successfully"
+      });
+      fetchPatients();
+    }
+  };
+
+  // Delete patient
+  const handleDeletePatient = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this patient?")) return;
+
+    const { error } = await supabase
+      .from('patients')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete patient",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Patient deleted successfully"
+      });
+      fetchPatients();
+    }
+  };
+
   // States for surgery selection
   const [showSurgerySelector, setShowSurgerySelector] = useState(false);
   const [surgerySearchTerm, setSurgerySearchTerm] = useState("");
-  const [selectedSurgeries, setSelectedSurgeries] = useState<any[]>([]);
+  const [selectedSurgeries, setSelectedSurgeries] = useState<string[]>([]);
   const [selectedSurgery, setSelectedSurgery] = useState<any>(null);
   const [surgeryDetails, setSurgeryDetails] = useState({
     packageAmount: "",
@@ -91,12 +176,12 @@ export function PatientRegistryList() {
     anaesthesiaType: "",
     otNotes: ""
   });
-  
+
   // States for diagnosis selection
   const [showDiagnosisSelector, setShowDiagnosisSelector] = useState(false);
   const [diagnosisSearchTerm, setDiagnosisSearchTerm] = useState("");
-  const [selectedDiagnoses, setSelectedDiagnoses] = useState<any[]>([]);
-  
+  const [selectedDiagnoses, setSelectedDiagnoses] = useState<string[]>([]);
+
   const [visitForm, setVisitForm] = useState({
     patientId: "",
     patientName: "",
@@ -104,20 +189,21 @@ export function PatientRegistryList() {
     visitType: "",
     visitReason: "",
     referringDoctor: "",
-    appointmentWith: ""
+    appointmentWith: "",
+    claim_id: "",
+    relation_with_employee: "",
+    status: ""
   });
-  
+
   // Filter surgeries based on search term
-  const filteredSurgeries = mockSurgeryList.filter(surgery => 
-    surgery.name.toLowerCase().includes(surgerySearchTerm.toLowerCase()) ||
-    surgery.code.toLowerCase().includes(surgerySearchTerm.toLowerCase()) ||
-    surgery.category.toLowerCase().includes(surgerySearchTerm.toLowerCase())
+  const filteredSurgeries = surgeryList.filter(surgery =>
+    surgery.name && surgery.name.toLowerCase().includes(surgerySearchTerm.toLowerCase())
   );
-  
+
   // Filter diagnoses based on search term
-  const filteredDiagnoses = mockDiagnosesList.filter(diagnosis => 
+  const filteredDiagnoses = diagnosesList.filter(diagnosis =>
     diagnosis.name.toLowerCase().includes(diagnosisSearchTerm.toLowerCase()) ||
-    diagnosis.code.toLowerCase().includes(diagnosisSearchTerm.toLowerCase())
+    (diagnosis.diagnosis_id || '').toLowerCase().includes(diagnosisSearchTerm.toLowerCase())
   );
 
   const [form, setForm] = useState({
@@ -154,7 +240,7 @@ export function PatientRegistryList() {
     email: "",
     fax: "",
     privilegeCard: "",
-    billingLink: "",
+    billing_link: "",
     referralLetter: null as any,
     diagnosis: "",
     surgery: "",
@@ -162,33 +248,34 @@ export function PatientRegistryList() {
     registrationDate: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
     insuranceStatus: "Active",
     referee: "",
-    type: ""
+    type: "",
+    claim_id: ""
   });
 
   // Function to add a surgery to the selection
   const addSurgery = (surgery: any) => {
-    if (!selectedSurgeries.some(s => s.name === surgery.name)) {
-      setSelectedSurgeries([...selectedSurgeries, surgery]);
+    if (!selectedSurgeries.includes(surgery.dr_id)) {
+      setSelectedSurgeries([...selectedSurgeries, surgery.dr_id]);
     }
   };
-  
+
   // Function to remove a surgery from the selection
-  const removeSurgery = (surgeryName: string) => {
-    setSelectedSurgeries(selectedSurgeries.filter(s => s.name !== surgeryName));
+  const removeSurgery = (dr_id: string) => {
+    setSelectedSurgeries(selectedSurgeries.filter(id => id !== dr_id));
   };
-  
+
   // Function to add a diagnosis to the selection
   const addDiagnosis = (diagnosis: any) => {
-    if (!selectedDiagnoses.some(d => d.name === diagnosis.name)) {
-      setSelectedDiagnoses([...selectedDiagnoses, diagnosis]);
+    if (!selectedDiagnoses.includes(diagnosis.diagnosis_id)) {
+      setSelectedDiagnoses([...selectedDiagnoses, diagnosis.diagnosis_id]);
     }
   };
-  
+
   // Function to remove a diagnosis from the selection
-  const removeDiagnosis = (diagnosisName: string) => {
-    setSelectedDiagnoses(selectedDiagnoses.filter(d => d.name !== diagnosisName));
+  const removeDiagnosis = (diagnosis_id: string) => {
+    setSelectedDiagnoses(selectedDiagnoses.filter(d => d !== diagnosis_id));
   };
-  
+
   // Function to handle opening the visit form for a specific patient
   const handleOpenVisitForm = (patient: any) => {
     setSelectedPatient(patient);
@@ -201,7 +288,7 @@ export function PatientRegistryList() {
     setSelectedDiagnoses([]);
     setShowVisitForm(true);
   };
-  
+
   // Function to handle opening the surgery edit form
   const handleSurgerySelect = (surgery: any) => {
     setSelectedSurgery(surgery);
@@ -215,11 +302,11 @@ export function PatientRegistryList() {
       otNotes: ""
     });
   };
-  
+
   // Function to save the surgery with details to the selected surgeries
   const saveSurgeryWithDetails = () => {
     if (!selectedSurgery) return;
-    
+
     const completeSurgery = {
       ...selectedSurgery,
       packageAmount: surgeryDetails.packageAmount,
@@ -230,70 +317,127 @@ export function PatientRegistryList() {
       anaesthesiaType: surgeryDetails.anaesthesiaType,
       otNotes: surgeryDetails.otNotes
     };
-    
+
     addSurgery(completeSurgery);
     setSelectedSurgery(null);
     setShowSurgerySelector(false);
   };
-  
+
+  const surgeryData = selectedSurgeries.map((dr_id, index) => ({
+    dr_id,
+    surgeon_id: selectedSurgeonId
+  }));
+
+  useEffect(() => {
+    fetchDoctors();
+    fetchReferringDoctors();
+  }, []);
+
+  useEffect(() => {
+    if (!form.claim_id && form.corporate === "ESIC") {
+      // Example: generate a simple claim id
+      const today = new Date();
+      const claimId = `ESIC-${today.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      setForm(f => ({ ...f, claim_id: claimId }));
+    }
+  }, [form.corporate]);
+
+  useEffect(() => {
+    async function fetchLatestVisit() {
+      const { data, error } = await supabase
+        .from('visits')
+        .select('*')
+        .eq('patient_unique_id', selectedPatient.unique_id) // or use patient id as needed
+        .order('visit_date', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        setLatestVisit(data[0]);
+      }
+    }
+    if (selectedPatient) fetchLatestVisit();
+  }, [selectedPatient]);
+
   return (
     <div className="overflow-x-auto max-h-[600px]">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Patient Dashboard</h2>
+        {/* <h2 className="text-lg font-semibold">Patient Dashboard</h2> */}
         <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600" onClick={() => setShowAddPatient(true)}>
           + New Patient Registration
         </button>
       </div>
+      {/* <div className="invoice-header">
+        CLAIM ID - {latestVisit?.claim_id || 'No Claim ID'}
+      </div> */}
       <table className="min-w-full text-xs border">
         <thead className="bg-blue-50">
           <tr>
-            <th className="p-2 border">ID</th>
+            <th className="p-2 border">Unique ID</th>
             <th className="p-2 border">Name</th>
             <th className="p-2 border">Age/Gender</th>
-            <th className="p-2 border">Primary Diagnosis</th>
-            <th className="p-2 border">Surgery</th>
+            <th className="p-2 border">Phone</th>
+            <th className="p-2 border">DOB</th>
             <th className="p-2 border">Status</th>
             <th className="p-2 border">Registration</th>
             <th className="p-2 border">Insurance</th>
-            <th className="p-2 border">Referee</th>
+            {/* <th className="p-2 border">Referee</th> */}
             <th className="p-2 border">Actions</th>
           </tr>
         </thead>
         <tbody>
           {patients.map((patient) => (
             <tr key={patient.id}>
-              <td className="p-2 border">{patient.id}</td>
+              <td className="p-2 border">{patient.unique_id}</td>
               <td className="p-2 border">
                 <Link href={`/patient-management/${patient.id}`} className="text-blue-600 underline hover:text-blue-800">
                   {patient.name}
                 </Link>
               </td>
               <td className="p-2 border">{patient.age} / {patient.gender}</td>
-              <td className="p-2 border">{patient.diagnosis}</td>
-              <td className="p-2 border">{patient.surgery}</td>
-              <td className="p-2 border">{patient.approvalStatus}</td>
-              <td className="p-2 border">{patient.registrationDate}</td>
-              <td className="p-2 border">{patient.insuranceStatus}</td>
-              <td className="p-2 border">{patient.referee}</td>
+              <td className="p-2 border">{patient.phone}</td>
+              <td className="p-2 border">{patient.dob}</td>
+              <td className="p-2 border">{patient.approval_status}</td>
+              <td className="p-2 border">{new Date(patient.registration_date).toLocaleDateString()}</td>
+              <td className="p-2 border">{patient.insurance_status}</td>
+              {/* <td className="p-2 border">{patient.referee}</td> */}
               <td className="p-2 border text-center">
-                <button 
+                <button
                   className="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-100"
+                  onClick={() => window.location.href = `/patient-details/${patient.id}`}
+                  title="View Patient Details"
+                >
+                  <Eye size={18} />
+                </button>
+
+                <button
+                  className="text-blue-600 hover:text-blue-800 p-1 rounded-full hover:bg-blue-100 ml-2"
                   onClick={() => handleOpenVisitForm(patient)}
                   title="Register New Visit"
                 >
                   <CalendarPlus size={18} />
+                </button>
+
+                <button
+                  className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 ml-2"
+                  onClick={() => handleDeletePatient(patient.id)}
+                  title="Delete Patient"
+                >
+                  <X size={18} />
                 </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-      
+
       {/* Patient Registration Form */}
       {showAddPatient && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50 overflow-auto">
           <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-full min-w-[1200px] w-auto border border-blue-100" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-            <PatientRegistration onClose={() => setShowAddPatient(false)} />
+            <PatientRegistration
+              onClose={() => setShowAddPatient(false)}
+              onSubmit={handleAddPatient}
+            />
           </div>
         </div>
       )}
@@ -304,34 +448,55 @@ export function PatientRegistryList() {
           <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-full w-[800px] border border-blue-100" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 className="text-2xl font-bold mb-1 text-blue-900">Register New Visit</h3>
             <p className="mb-4 text-gray-500">Patient: {selectedPatient.name} ({selectedPatient.id})</p>
-            
-            <form onSubmit={e => {
+
+            <form onSubmit={async e => {
               e.preventDefault();
-              // Logic to save the visit data
-              setShowVisitForm(false);
-              toast({
-                title: "Visit Registered Successfully!",
-                description: `A new visit has been registered for ${selectedPatient.name}`
-              });
+
+              const { data, error } = await supabase.from('visits').insert([{
+                patient_unique_id: selectedPatient.unique_id,
+                visit_date: visitForm.visitDate,
+                visit_type: visitForm.visitType,
+                appointment_with: visitForm.appointmentWith,
+                visit_reason: visitForm.visitReason,
+                referring_doctor: visitForm.referringDoctor,
+                diagnosis: selectedDiagnoses,
+                surgery: selectedSurgeries,
+                claim_id: visitForm.claim_id,
+                relation_with_employee: visitForm.relation_with_employee,
+                status: visitForm.status
+              }]);
+
+              if (error) {
+                toast({
+                  title: "Error",
+                  description: "Failed to register visit",
+                  variant: "destructive"
+                });
+              } else {
+                toast({
+                  title: "Success",
+                  description: "Visit registered successfully"
+                });
+                setShowVisitForm(false);
+              }
             }}>
               <div className="border rounded-xl p-6 mb-4 bg-blue-50/40">
                 <h3 className="font-semibold mb-4 text-blue-800 text-lg bg-blue-100/60 rounded px-2 py-2 shadow-sm">Visit Details</h3>
-                
+
                 <div className="grid md:grid-cols-2 gap-x-6 gap-y-3">
                   <div>
                     <label className="block mb-1">Visit Date *</label>
-                    <input 
-                      type="date" 
-                      className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition" 
-                      required 
+                    <input
+                      type="date"
+                      className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition"
+                      required
                       value={visitForm.visitDate}
                       onChange={e => setVisitForm({ ...visitForm, visitDate: e.target.value })}
                     />
                   </div>
-                  
                   <div>
                     <label className="block mb-1">Visit Type *</label>
-                    <select 
+                    <select
                       className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition"
                       required
                       value={visitForm.visitType}
@@ -345,61 +510,98 @@ export function PatientRegistryList() {
                       <option value="Procedure">Procedure</option>
                     </select>
                   </div>
-                  
                   <div>
                     <label className="block mb-1">Appointment With *</label>
-                    <select 
-                      className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition"
-                      required
+                    <select
                       value={visitForm.appointmentWith}
                       onChange={e => setVisitForm({ ...visitForm, appointmentWith: e.target.value })}
+                      className="border rounded-lg px-3 py-2 w-full"
                     >
                       <option value="">Select Doctor</option>
-                      <option value="Dr. Neha Patel">Dr. Neha Patel</option>
-                      <option value="Dr. Vikram Singh">Dr. Vikram Singh</option>
-                      <option value="Dr. Anjali Gupta">Dr. Anjali Gupta</option>
+                      {doctors.map((doctor, index) => (
+                        <option key={`doctor-${doctor.dr_id}-${index}`} value={doctor.dr_id}>
+                          {doctor.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
-                  
                   <div>
                     <label className="block mb-1">Reason for Visit *</label>
-                    <input 
-                      className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition" 
-                      required 
+                    <input
+                      className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition"
+                      required
                       placeholder="Reason for visit"
                       value={visitForm.visitReason}
                       onChange={e => setVisitForm({ ...visitForm, visitReason: e.target.value })}
                     />
                   </div>
+                  <div>
+                    <label className="block mb-1 font-medium">Relation with Employee</label>
+                    <select
+                      className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition"
+                      value={visitForm.relation_with_employee}
+                      onChange={e => setVisitForm({ ...visitForm, relation_with_employee: e.target.value })}
+                      required
+                    >
+                      <option value="">Select Relation</option>
+                      <option value="Self">Self</option>
+                      <option value="Father">Father</option>
+                      <option value="Mother">Mother</option>
+                      <option value="Brother">Brother</option>
+                      <option value="Sister">Sister</option>
+                      <option value="Wife">Wife</option>
+                      <option value="Husband">Husband</option>
+                      <option value="Son">Son</option>
+                      <option value="Daughter">Daughter</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block mb-1 font-medium">Status</label>
+                    <select
+                      className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition"
+                      value={visitForm.status}
+                      onChange={e => setVisitForm({ ...visitForm, status: e.target.value })}
+                      required
+                    >
+                      <option value="">Select Status</option>
+                      <option value="General">General</option>
+                      <option value="Shared">Shared</option>
+                      <option value="Special">Special</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-              
+
               <div className="border rounded-xl p-6 mb-4 bg-blue-50/40">
                 <h3 className="font-semibold mb-4 text-blue-800 text-lg bg-blue-100/60 rounded px-2 py-2 shadow-sm">Medical Information</h3>
-                
+
                 <div className="grid md:grid-cols-1 gap-x-6 gap-y-6">
                   {/* Diagnosis Selection */}
                   <div>
                     <label className="block mb-1 font-medium">Diagnosis *</label>
                     {/* Display selected diagnoses */}
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {selectedDiagnoses.map((diagnosis) => (
-                        <div 
-                          key={diagnosis.name} 
-                          className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md"
-                        >
-                          <span>{diagnosis.name}</span>
-                          <button 
-                            type="button"
-                            onClick={() => removeDiagnosis(diagnosis.name)}
-                            className="text-blue-600 hover:text-blue-800"
+                      {selectedDiagnoses.map((id, index) => {
+                        const diag = diagnosesList.find(d => d.id === id);
+                        return (
+                          <div
+                            key={`diagnosis-${id}-${index}`}
+                            className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md"
                           >
-                            <X size={16} />
-                          </button>
-                  </div>
-                      ))}
-                  </div>
-                    
+                            <span>{diag?.name || id}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeDiagnosis(id)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
                     <div className="relative">
                       <button
                         type="button"
@@ -409,31 +611,34 @@ export function PatientRegistryList() {
                         <span className="text-gray-500">Search for a diagnosis...</span>
                         <Search size={18} className="text-gray-400" />
                       </button>
+                    </div>
                   </div>
-                  </div>
-                  
+
                   {/* Surgery Selection */}
                   <div>
                     <label className="block mb-1 font-medium">Surgery (if applicable)</label>
                     {/* Display selected surgeries */}
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {selectedSurgeries.map((surgery) => (
-                        <div 
-                          key={surgery.name} 
-                          className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-md"
-                        >
-                          <span>{surgery.name}</span>
-                          <button 
-                            type="button"
-                            onClick={() => removeSurgery(surgery.name)}
-                            className="text-green-600 hover:text-green-800"
+                      {selectedSurgeries.map((dr_id, index) => {
+                        const surgery = surgeryList.find(s => s.dr_id === dr_id);
+                        return (
+                          <div
+                            key={`surgery-${dr_id}-${index}`}
+                            className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-md"
                           >
-                            <X size={16} />
-                          </button>
-                  </div>
-                      ))}
-                  </div>
-                    
+                            <span>{surgery?.name || dr_id}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeSurgery(dr_id)}
+                              className="text-green-600 hover:text-green-800"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
                     <div className="relative">
                       <button
                         type="button"
@@ -443,36 +648,48 @@ export function PatientRegistryList() {
                         <span className="text-gray-500">Search for a surgery...</span>
                         <Search size={18} className="text-gray-400" />
                       </button>
+                    </div>
                   </div>
-                  </div>
-                  
+
                   <div>
                     <label className="block mb-1">Referring Doctor</label>
-                    <select 
+                    <select
                       className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition"
                       value={visitForm.referringDoctor}
                       onChange={e => setVisitForm({ ...visitForm, referringDoctor: e.target.value })}
                     >
                       <option value="">Select Referring Doctor</option>
-                      <option value="Dr. Neha Patel">Dr. Neha Patel</option>
-                      <option value="Dr. Vikram Singh">Dr. Vikram Singh</option>
-                      <option value="Dr. Anjali Gupta">Dr. Anjali Gupta</option>
-                      <option value="Other">Other</option>
+                      {referringDoctors.map((doctor, index) => (
+                        <option key={`ref-doctor-${doctor.dr_id}-${index}`} value={doctor.dr_id}>
+                          {doctor.name}
+                        </option>
+                      ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 font-medium">Claim ID</label>
+                    <input
+                      type="text"
+                      className="border rounded-lg px-3 py-2 w-full bg-white focus:ring-2 focus:ring-blue-300 transition"
+                      placeholder="Enter Claim ID"
+                      value={visitForm.claim_id}
+                      onChange={e => setVisitForm({ ...visitForm, claim_id: e.target.value })}
+                    />
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end gap-4 mt-4">
-                <button 
-                  type="button" 
-                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold transition" 
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold transition"
                   onClick={() => setShowVisitForm(false)}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-bold shadow transition"
                 >
                   Register Visit
@@ -482,22 +699,22 @@ export function PatientRegistryList() {
           </div>
         </div>
       )}
-      
+
       {/* Surgery Selection Modal */}
       {showSurgerySelector && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[100]">
           <div className="bg-white p-6 rounded-lg w-[800px] max-h-[90vh] relative">
             {/* Close button */}
-            <button 
+            <button
               onClick={() => setShowSurgerySelector(false)}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
             >
               <X size={24} />
             </button>
-            
+
             <h2 className="text-2xl font-bold mb-2">Add Surgery</h2>
             <p className="text-gray-600 mb-6">Search for a surgery to add to this patient's record.</p>
-            
+
             {/* Search input */}
             <div className="relative mb-6">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
@@ -511,24 +728,23 @@ export function PatientRegistryList() {
                 onChange={(e) => setSurgerySearchTerm(e.target.value)}
               />
             </div>
-            
+
             {/* Results list */}
             <div className="border rounded-lg overflow-hidden">
               {filteredSurgeries.length > 0 ? (
                 <div className="divide-y divide-gray-200">
-                  {filteredSurgeries.map((surgery) => (
+                  {filteredSurgeries.map((surgery, index) => (
                     <div
-                      key={surgery.code}
+                      key={`filtered-surgery-${surgery.dr_id}-${index}`}
                       className="p-4 flex justify-between items-center"
                     >
                       <div>
                         <div className="text-lg font-semibold">{surgery.name}</div>
                         <div className="flex items-center mt-1 gap-2">
-                          <span className="text-blue-600">{surgery.code}</span>
-                          <span className="px-3 py-1 bg-gray-100 rounded-full text-sm">{surgery.category}</span>
+                          <span className="text-blue-600">{surgery.dr_id}</span>
                         </div>
                       </div>
-                      <button 
+                      <button
                         className="flex items-center gap-1 px-4 py-1 text-gray-700 hover:bg-gray-100 rounded-lg"
                         onClick={() => {
                           addSurgery(surgery);
@@ -547,7 +763,7 @@ export function PatientRegistryList() {
                 </div>
               )}
             </div>
-            
+
             <div className="mt-6 flex justify-end">
               <button
                 className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
@@ -559,7 +775,7 @@ export function PatientRegistryList() {
           </div>
         </div>
       )}
-      
+
       {/* Diagnosis Selection Modal */}
       {showDiagnosisSelector && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
@@ -571,7 +787,7 @@ export function PatientRegistryList() {
               </button>
             </div>
             <p className="text-gray-600 mb-4">Search for a diagnosis to add to this patient's record.</p>
-            
+
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
@@ -582,13 +798,13 @@ export function PatientRegistryList() {
                 onChange={(e) => setDiagnosisSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <div className="overflow-y-auto flex-1 border rounded-lg">
               {filteredDiagnoses.length > 0 ? (
                 <div>
-                  {filteredDiagnoses.map((diagnosis) => (
+                  {filteredDiagnoses.map((diagnosis, index) => (
                     <div
-                      key={diagnosis.code}
+                      key={`filtered-diagnosis-${diagnosis.id}-${index}`}
                       className="p-3 border-b hover:bg-gray-50 flex justify-between items-center cursor-pointer"
                       onClick={() => {
                         addDiagnosis(diagnosis);
@@ -597,11 +813,11 @@ export function PatientRegistryList() {
                     >
                       <div>
                         <div className="font-medium">{diagnosis.name}</div>
-                        <div className="text-sm text-blue-600 mt-1">{diagnosis.code}</div>
+                        <div className="text-sm text-blue-600 mt-1">{diagnosis.diagnosis_id}</div>
                       </div>
-                      <button 
+                      <button
                         className="text-blue-600 hover:text-blue-800"
-                        onClick={(e) => {
+                        onClick={e => {
                           e.stopPropagation();
                           addDiagnosis(diagnosis);
                           setShowDiagnosisSelector(false);
@@ -616,7 +832,7 @@ export function PatientRegistryList() {
                 <div className="p-4 text-center text-gray-500">No diagnoses found matching your search.</div>
               )}
             </div>
-            
+
             <div className="mt-4 flex justify-end">
               <button
                 className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"

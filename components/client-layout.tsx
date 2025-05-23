@@ -80,19 +80,32 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       </ThemeProvider>
     )
   }
-  
+
   // For authenticated routes, render with sidebar
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <ToastProvider>
-        <div className="flex h-screen">
-          <Sidebar />
+      <div className="flex h-screen">
+        <Sidebar />
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          {/* Top bar with Logout button */}
+          <div className="w-full flex justify-end items-center p-4 border-b bg-white shadow-sm gap-4">
+            {username && (
+              <span className="text-gray-700 font-medium flex items-center gap-2">
+                <User className="h-4 w-4" /> {username}
+              </span>
+            )}
+            <Button variant="outline" onClick={handleLogout} className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" /> Logout
+              </Button>
+            </div>
           <main className="flex-1 overflow-y-auto">
-            {children}
+          {children}
           </main>
         </div>
+      </div>
         <ToastViewport />
-        <Toaster />
+      <Toaster />
       </ToastProvider>
     </ThemeProvider>
   )

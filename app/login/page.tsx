@@ -10,61 +10,36 @@ import { ActivitySquare, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [credentials, setCredentials] = useState({
-    email: '',
-    password: ''
-  });
-  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCredentials(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     
-    try {
-      setLoading(true);
-      
-      // Check if user exists with provided email and password
-      const { data, error } = await supabase
-        .from('user_register')
-        .select('*')
-        .eq('email', credentials.email)
-        .eq('password', credentials.password)  // In a real app, use proper password hashing!
+    // Check user in Supabase
+    const { data: user, error: supaError } = await supabase
+      .from("user")
+      .select("*")
+      .eq("email", form.email)
+      .eq("password", form.password) // Note: In production, use hashed passwords!
         .single();
       
-      if (error || !data) {
+    if (supaError || !user) {
         setError("Invalid email or password");
         return;
       }
+         
+    // Set login status in localStorage
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("username", user.full_name || user.email);
       
-      // In a real app, you would now set a session or token
-      // For simplicity, we'll just redirect to the home page
-      
-      // Store user info in localStorage
-      localStorage.setItem('user', JSON.stringify({
-        id: data.id,
-        full_name: data.full_name,
-        email: data.email,
-        is_verified: data.is_verified
-      }));
-      
-      // Redirect to home page
-      router.push('/');
-      
-    } catch (error: any) {
-      console.error("Login error:", error);
-      setError(error.message || "An error occurred during login");
-    } finally {
-      setLoading(false);
-    }
+    // Redirect to home/dashboard
+    router.push("/");
   };
 
   return (
@@ -92,11 +67,11 @@ export default function LoginPage() {
             <Input
               type="email"
               name="email"
-              value={credentials.email}
+              value={form.email}
               onChange={handleChange}
               placeholder="Enter your email"
               className="w-full"
-              disabled={loading}
+              // disabled={true}
               autoFocus
             />
           </div>
@@ -106,11 +81,10 @@ export default function LoginPage() {
             <Input
               type="password"
               name="password"
-              value={credentials.password}
+              value={form.password}
               onChange={handleChange}
               placeholder="Enter your password"
               className="w-full"
-              disabled={loading}
             />
           </div>
           
@@ -118,16 +92,8 @@ export default function LoginPage() {
             <Button 
               type="submit" 
               className="w-full flex items-center justify-center" 
-              disabled={loading}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Logging in...
-                </>
-              ) : (
-                "Sign In"
-              )}
+              Login
             </Button>
           </div>
           

@@ -67,13 +67,17 @@ export default function RegisterPage() {
       setLoading(true);
       
       // First check if user already exists
-      const { data: existingUser, error: checkError } = await supabase
-        .from('user_register')
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('user')
         .select('id')
-        .or(`email.eq.${formData.email},phone.eq.${formData.phone}`)
-        .single();
+        .or(`email.eq.${formData.email},phone.eq.${formData.phone}`);
       
-      if (existingUser) {
+      if (checkError) {
+        console.error("Error checking existing users:", checkError);
+        throw new Error("Failed to check if user exists");
+      }
+      
+      if (existingUsers && existingUsers.length > 0) {
         setError("User with this email or phone already exists");
         return;
       }
@@ -95,13 +99,14 @@ export default function RegisterPage() {
       };
       
       // Insert user data
-      const { data, error } = await supabase
-        .from('user_register')
+      const { data, error: insertError } = await supabase
+        .from('user')
         .insert([userData])
         .select();
       
-      if (error) {
-        throw error;
+      if (insertError) {
+        console.error("Error inserting user:", insertError);
+        throw new Error(insertError.message || "Failed to create user account");
       }
       
       // Show success message
@@ -118,7 +123,7 @@ export default function RegisterPage() {
       }, 2000);
       
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("Registration error:", error, error?.message, error?.details);
       setError(error.message || "An error occurred during registration");
       
       // Show error toast

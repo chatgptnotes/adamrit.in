@@ -50,7 +50,7 @@ import {
 } from "@/components/ui/dialog"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import React from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { DiagnosisList } from "@/components/diagnosis-list"
 import {
   Select,
@@ -59,6 +59,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { supabase } from "@/lib/supabase/client"; // Make sure this import is correct
 
 // Mock patient data
 const patientData = {
@@ -164,149 +165,191 @@ const diagnosisDatabase = [
   { id: "d20", name: "Psoriasis", icd: "L40" },
 ]
 
-// Move InvoicePage function here
-function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd }: {
+// Add these interfaces at the top of the file, after the imports
+interface InvoiceSubItem {
+  sr: string;
+  item: string;
+  code?: string;
+  rate: string;
+  qty: number;
+  amount: string;
+  details?: string;
+}
+
+interface InvoiceItem {
+  section?: string;
+  sr?: string;
+  item?: string;
+  code?: string;
+  rate?: string;
+  qty?: number;
+  amount?: string;
+  details?: string;
+  sub?: InvoiceSubItem[];
+}
+
+// Add print styles as a constant
+const printStyles = `
+  @media print {
+    html, body {
+      width: 210mm;
+      min-height: 297mm;
+      font-size: 12px;
+      color: #000;
+    }
+    .invoice-a4-page {
+      page-break-after: always;
+      width: 100%;
+      min-height: 297mm;
+      box-sizing: border-box;
+      padding: 20mm 10mm;
+    }
+    .no-print { display: none !important; }
+  }
+  .invoice-table th, .invoice-table td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  .invoice-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .invoice-header {
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    border: 1px solid #000;
+    padding: 4px;
+  }
+  .invoice-section-title {
+    font-weight: bold;
+    background: #f2f2f2;
+  }
+  .invoice-green {
+    background: #b6e7b0;
+    font-weight: bold;
+  }
+  .invoice-total-row {
+    font-weight: bold;
+    font-size: 16px;
+    background: #f2f2f2;
+  }
+`;
+
+function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, visits }: {
   patientId: string,
   diagnoses: Diagnosis[],
   conservativeStart: string,
   conservativeEnd: string,
   surgicalStart: string,
-  surgicalEnd: string
+  surgicalEnd: string,
+  visits: Visit[]
 }) {
-  // Mock data based on the attached invoice
-  // Generate BILL NO dynamically with ESIC prefix and date
-  const today = new Date();
-  const day = String(today.getDate()).padStart(2, '0');
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const year = String(today.getFullYear()).slice(-2);
-  const billNo = `ESIC-BL${day}${month}-${year}`;
+  // 1. All useState hooks must be at the top
+  const [patientUniqueId, setPatientUniqueId] = useState<string>('');
+  const [allVisits, setAllVisits] = useState<Visit[]>([]);
+  const [patientData, setPatientData] = useState<any>(null);
+  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
 
-  const invoice = {
-    billNo: billNo,
-    regNo: "IH24C04007",
-    patientName: patientData.name,
-    age: 43,
-    sex: "FEMALE",
-    beneficiary: "RAJKUMAR BASU",
-    relation: "WIFE",
-    rank: "Nb Sub / Ris ( RETD.)",
-    echsRegNo: "00005886842",
-    category: "SEMI-PRIVATE",
-    date: "15/03/2024",
-    admission: "04-03-2024",
-    discharge: "15-03-2024",
-    diagnosis: [
-      "RIGHT SHOULDER ADHESIVE CAPSULITIS",
-      "TENDINOPATHY",
-      "DIABETES MELLITUS",
-      "POST OPERATIVE STATUS FOLLOWING RIGHT SHOULDER ARTHROSCOPY WITH CAPSULOTOMY, THERAPEUTIC ARTHROSCOPY WITH IMPLANT, AND BICEPS TENODESIS."
-    ],
-    items: [
-      { section: "Conservative Treatment" },
-      { section: "Surgical Package (7 Days)" },
-      { sr: "1)", item: "Consultation for Inpatients", code: "2", rate: "350.00", qty: 6, amount: "2100.00", sub: [
-        { sr: "i)", item: "Dr. Dhiraj Gupta MS. (Ortho)", rate: "350.00", qty: 6, amount: "2100.00", details: "Dt.(04/03/2024 TO 09/03/2024)" },
-        { sr: "ii)", item: "Dr. Ashwin Chinchkhede (MD. Med.)", rate: "350.00", qty: 6, amount: "2100.00", details: "Dt.(04/03/2024 TO 09/03/2024)" }
-      ] },
-      { sr: "2)", item: "Accomodation For Semi-Private Ward", rate: "3000.00", qty: 6, amount: "18000.00", details: "Dt.(04/03/2024 TO 09/03/2024)" },
-      { sr: "3)", item: "Pathology Charges", rate: "1722.00", qty: 1, amount: "1722.00", details: "Dt.(04/03/2024 TO 15/03/2024) Note:Attached Pathology Break-up" },
-      { sr: "4)", item: "Medicine Charges", rate: "21852.00", qty: 1, amount: "21852.00", details: "Dt.(04/03/2024 TO 15/03/2024) Note:Attached Pharmacy Statement with Bills" },
-      { sr: "5)", item: "Others Charges", sub: [
-        { sr: "i)", item: "ECG", code: "590", rate: "175.00", qty: 1, amount: "175.00" },
-        { sr: "ii)", item: "MRI Shoulder", code: "1670", rate: "2300.00", qty: 1, amount: "2300.00" },
-        { sr: "iii)", item: "Chest PA view", code: "1608", rate: "230.00", qty: 1, amount: "230.00" },
-        { sr: "iv)", item: "RBS", code: "1444", rate: "24.00", qty: 38, amount: "912.00" }
-      ] },
-      { sr: "6)", item: "Surgical Treatment (10/03/2024)", sub: [
-        { sr: "i)", item: "Other Major Surgery(Mumford Procedure)", code: "1238", rate: "40500", qty: 1, amount: "40500.00" },
-        { sr: "ii)", item: "Capsulotomy of Shoulder", code: "1216", rate: "18170", qty: 1, amount: "9085.00", details: "Less : 50% as per CGHS Guidline" },
-        { sr: "iii)", item: "Arthroscopy-therapeutic: with implant", code: "1190", rate: "17854", qty: 1, amount: "8927.00", details: "Less : 50% as per CGHS Guidline" },
-        { sr: "iv)", item: "Biceps tenodesis", code: "1213", rate: "14490", qty: 1, amount: "7245.00", details: "Less : 50% as per CGHS Guidline" }
-      ] },
-      { sr: "7)", item: "Implant Charges", sub: [
-        { sr: "i)", item: "Anchor Screw", code: "UNLISTED", rate: "21500.00", qty: 2, amount: "43000.00" }
-      ] }
-    ],
-    total: "158,148.00"
+  // 2. Format visit_id to bill number format - move this outside useEffect
+  const formatBillNumber = (visitId: string) => {
+    const number = visitId.split('-')[1];
+    const year = new Date().getFullYear();
+    return `ESIC-${year}-${number}`;
   };
 
-  // Print styles for A4
-  const printStyles = `
-    @media print {
-      html, body {
-        width: 210mm;
-        min-height: 297mm;
-        font-size: 12px;
-        color: #000;
-      }
-      .invoice-a4-page {
-        page-break-after: always;
-        width: 100%;
-        min-height: 297mm;
-        box-sizing: border-box;
-        padding: 20mm 10mm;
-      }
-      .no-print { display: none !important; }
-    }
-    .invoice-table th, .invoice-table td {
-      border: 1px solid #000;
-      padding: 4px 6px;
-      font-size: 12px;
-    }
-    .invoice-table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-bottom: 8px;
-    }
-    .invoice-header {
-      text-align: center;
-      font-weight: bold;
-      font-size: 16px;
-      border: 1px solid #000;
-      padding: 4px;
-    }
-    .invoice-section-title {
-      font-weight: bold;
-      background: #f2f2f2;
-    }
-    .invoice-green {
-      background: #b6e7b0;
-      font-weight: bold;
-    }
-    .invoice-total-row {
-      font-weight: bold;
-      font-size: 16px;
-      background: #f2f2f2;
-    }
-  `;
+  // 3. All useEffects must be together and in a consistent order
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // First fetch all visits
+        const { data: visitsData, error: visitsError } = await supabase
+          .from('visits')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-  // Type for invoice item and sub-item
-  interface InvoiceSubItem {
-    sr: string;
-    item: string;
-    code?: string;
-    rate: string;
-    qty: number;
-    amount: string;
-    details?: string;
-  }
-  interface InvoiceItem {
-    section?: string;
-    sr?: string;
-    item?: string;
-    code?: string;
-    rate?: string;
-    qty?: number;
-    amount?: string;
-    details?: string;
-    sub?: InvoiceSubItem[];
+        if (visitsError) {
+          console.error("Error fetching visits:", visitsError);
+          return;
+        }
+
+        if (visitsData && visitsData.length > 0) {
+          setAllVisits(visitsData);
+          const latestVisit = visitsData[0];
+          
+          // Then fetch patient data using the patient_unique_id from latest visit
+          const { data: patientData, error: patientError } = await supabase
+            .from('patients')
+            .select('*')
+            .eq('unique_id', latestVisit.patient_unique_id)
+            .single();
+
+          if (patientError) {
+            console.error("Error fetching patient data:", patientError);
+            return;
+          }
+
+          if (patientData) {
+            setPatientData(patientData);
+            setPatientUniqueId(latestVisit.patient_unique_id);
+          }
+        }
+      } catch (err) {
+        console.error("Error in fetchData:", err);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  // 4. Initialize invoice items from invoice data
+  useEffect(() => {
+    if (patientData && allVisits.length > 0) {
+      const latestVisit = allVisits[0];
+      const invoice = {
+        items: [
+          { section: "Conservative Treatment" },
+          { section: "Surgical Package (7 Days)" },
+          { sr: "1)", item: "Consultation for Inpatients", code: "2", rate: "350.00", qty: 6, amount: "2100.00", sub: [
+            { sr: "i)", item: latestVisit.appointment_with || 'Loading...', rate: "350.00", qty: 6, amount: "2100.00", details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})` },
+            { sr: "ii)", item: latestVisit.referring_doctor || 'Loading...', rate: "350.00", qty: 6, amount: "2100.00", details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})` }
+          ] }
+        ]
+      };
+      setInvoiceItems(invoice.items);
+    }
+  }, [patientData, allVisits, conservativeStart, conservativeEnd]);
+
+  // 5. Get the latest visit
+  const latestVisit = allVisits[0];
+
+  // 6. Loading state
+  if (!patientData || !latestVisit) {
+    return <div>Loading...</div>;
   }
 
-  // Deep clone invoice items for state
-  const deepClone = (obj: any) => JSON.parse(JSON.stringify(obj));
-  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>(deepClone(invoice.items));
+  // 7. Invoice data
+  const invoice = {
+    billNo: latestVisit.visit_id ? formatBillNumber(latestVisit.visit_id) : 'Loading...',
+    regNo: patientUniqueId || 'Loading...',
+    patientName: patientData.name,
+    age: patientData.age,
+    sex: patientData.gender.toUpperCase(),
+    beneficiary: patientUniqueId || 'Loading...',
+    relation: "SELF",
+    rank: "ESIC",
+    echsRegNo: patientUniqueId || 'Loading...',
+    category: "SEMI-PRIVATE",
+    date: new Date().toLocaleDateString('en-GB'),
+    admission: latestVisit.visit_date ? new Date(latestVisit.visit_date).toLocaleDateString('en-GB') : 'Loading...',
+    discharge: new Date().toLocaleDateString('en-GB'),
+    diagnosis: diagnoses.map(d => d.name),
+    items: invoiceItems
+  };
 
-  // Handler to update quantity
+  // 8. Handlers
   const handleQtyChange = (idx: number, subIdx?: number, value?: number) => {
     setInvoiceItems((prevItems: InvoiceItem[]) => prevItems.map((item: InvoiceItem, i: number) => {
       if (i !== idx) return item;
@@ -326,7 +369,6 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
     }));
   };
 
-  // Handler to update doctor name
   const handleDoctorNameChange = (idx: number, subIdx: number, newName: string) => {
     setInvoiceItems((prevItems: InvoiceItem[]) => prevItems.map((item: InvoiceItem, i: number) => {
       if (i !== idx) return item;
@@ -341,7 +383,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
     }));
   };
 
-  // Calculate total
+  // 9. Calculate total
   const total = invoiceItems.reduce((sum: number, item: InvoiceItem) => {
     if (item.sub) {
       return sum + item.sub.reduce((s: number, sub: InvoiceSubItem) => s + parseFloat(sub.amount), 0);
@@ -351,12 +393,15 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
     return sum;
   }, 0);
 
+  // 10. Render
   return (
     <div className="invoice-a4-page bg-white shadow border mt-6" style={{ maxWidth: '210mm', margin: '0 auto', padding: 16 }}>
       <style>{printStyles}</style>
       <div className="invoice-header">FINAL BILL</div>
       <div className="invoice-header">ESIC</div>
-      <div className="invoice-header">CLAIM ID - ESIC-29430623</div>
+      <div className="invoice-header">
+        CLAIM ID - {latestVisit?.claim_id || 'No Visit ID'}
+      </div>
       <div className="flex justify-between mt-2 mb-2" style={{ fontSize: '12px' }}>
         <div>
           <div><b>BILL NO</b>: {invoice.billNo}</div>
@@ -373,11 +418,11 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
         <div style={{ fontSize: '12px', marginLeft: 'auto', width: '50%', textAlign: 'left' }}>
           <div><b>DATE:-</b> {invoice.date}</div>
           <div style={{ marginTop: 24 }}><b>DIAGNOSIS</b>:</div>
-          {diagnoses && diagnoses.length > 0
-            ? diagnoses.map((d, i) => <div key={i}>*{d.name}</div>)
-            : <div>*No diagnosis selected</div>}
-          <div style={{ marginTop: 16 }}><b>DATE OF ADMISSION</b>: {patientData.dateOfAdmission}</div>
-          <div><b>DATE OF DISCHARGE</b>: {patientData.dateOfDischarge}</div>
+          {latestVisit?.diagnosis
+            ? <div>{latestVisit.diagnosis}</div>
+            : <div>*No diagnosis found in visit</div>}
+          <div style={{ marginTop: 16 }}><b>DATE OF ADMISSION</b>: {invoice.admission}</div>
+          <div><b>DATE OF DISCHARGE</b>: {invoice.discharge}</div>
         </div>
       </div>
       <div className="mb-4 p-2 border rounded bg-blue-50">
@@ -574,14 +619,95 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
   );
 }
 
-export function PatientDashboard() {
-  // User-input states for dates
+// Remove the mock patient data since we'll get it from props
+interface Patient {
+  id: string;
+  patient_id: string;
+  unique_id: string;  // Added this line
+  patient_unique_id: string;
+  name: string;
+  age: number;
+  gender: string;
+  phone?: string;
+  address?: string;
+  insurance_status?: string;
+  registration_date: string;
+  last_visit_date?: string;
+  date_of_admission?: string;
+  date_of_discharge?: string;
+}
+
+// Add Visit interface after the Patient interface
+interface Visit {
+  id: string;
+  visit_id: string;
+  patient_unique_id: string;
+  visit_date: string;
+  visit_type: string;
+  appointment_with: string;
+  visit_reason: string;
+  referring_doctor: string;
+  diagnosis: string;
+  surgery: string;
+  created_at: string;
+  claim_id: string;
+}
+
+interface PatientDashboardProps {
+  patient: Patient;
+}
+
+export function PatientDashboard({ patient }: PatientDashboardProps) {
+  // Add null check at the start of the component
+  if (!patient) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-700">Loading patient data...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  // Add state variables for treatment dates
   const [conservativeStart, setConservativeStart] = useState('2024-03-04');
   const [conservativeEnd, setConservativeEnd] = useState('2024-03-09');
   const [surgicalStart, setSurgicalStart] = useState('2024-03-10');
   const [surgicalEnd, setSurgicalEnd] = useState('2024-03-15');
 
-  const [visits, setVisits] = useState(visitHistoryData)
+  // Use patient data from props instead of mock data
+  const patientData = {
+    id: patient.id,
+    unique_id: patient.unique_id,
+    name: patient.name,
+    age: patient.age,
+    gender: patient.gender,
+    phone: patient.phone || '',
+    address: patient.address || '',
+    insuranceStatus: patient.insurance_status || 'Active',
+    registrationDate: new Date(patient.registration_date).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }),
+    lastVisit: patient.last_visit_date ? new Date(patient.last_visit_date).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }) : 'No visits yet',
+    dateOfAdmission: patient.date_of_admission ? new Date(patient.date_of_admission).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }) : 'Not admitted',
+    dateOfDischarge: patient.date_of_discharge ? new Date(patient.date_of_discharge).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }) : 'Not discharged'
+  };
+
+  const [visits, setVisits] = useState<Visit[]>([]);
   const [isVisitFormOpen, setIsVisitFormOpen] = useState(false)
   const [newVisit, setNewVisit] = useState({
     reason: "",
@@ -662,6 +788,8 @@ export function PatientDashboard() {
   );
 
   const router = useRouter();
+  const params = useParams();
+  const patientId = params.id; // or whatever your param is called
 
   // Navigate to settings page
   const goToSettings = () => {
@@ -762,7 +890,7 @@ export function PatientDashboard() {
               <strong>Patient Name:</strong> ${patientData.name}
             </div>
             <div>
-              <strong>Patient ID:</strong> ${patientData.id}
+              <strong>Patient ID:</strong> ${patientData.unique_id}
           </div>
             <div>
               <strong>Age:</strong> ${patientData.age} years
@@ -1055,6 +1183,21 @@ export function PatientDashboard() {
       startWidth: sidebarWidth
     };
   };
+
+  const fetchVisits = async () => {
+    if (!patient?.unique_id) return;
+    const { data, error } = await supabase
+      .from('visits')
+      .select('*')
+      .eq('patient_unique_id', patient.unique_id) // filter by patient
+      .order('created_at', { ascending: false });
+    if (error) { /* handle error */ }
+    setVisits(data || []);
+  };
+
+  useEffect(() => {
+    fetchVisits();
+  }, [patient?.unique_id]);
 
   return (
     <div className="flex">
@@ -1445,11 +1588,11 @@ export function PatientDashboard() {
                     <h2 className="font-bold text-2xl">{patientData.name}</h2>
                     <div className="flex items-center gap-4 mt-1">
                       <Badge variant="outline" className="px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
-                        ID: {patientData.id}
+                        ID: {patientData.unique_id} , {patientData.age} years, {patientData.gender}
                       </Badge>
-                      <span className="text-sm text-muted-foreground">
+                      {/* <span className="text-sm text-muted-foreground">
                         {patientData.age} years, {patientData.gender}
-                      </span>
+                      </span> */}
                     </div>
                   </div>
                 </div>
@@ -1616,9 +1759,14 @@ export function PatientDashboard() {
                 <input type="date" value={surgicalEnd} onChange={e => setSurgicalEnd(e.target.value)} className="border rounded px-2 py-1" />
               </div>
             </div>
-            <InvoicePage patientId={patientData.id} diagnoses={diagnoses} 
-              conservativeStart={conservativeStart} conservativeEnd={conservativeEnd}
-              surgicalStart={surgicalStart} surgicalEnd={surgicalEnd}
+            <InvoicePage 
+              patientId={patientData.id} 
+              diagnoses={diagnoses} 
+              conservativeStart={conservativeStart} 
+              conservativeEnd={conservativeEnd}
+              surgicalStart={surgicalStart} 
+              surgicalEnd={surgicalEnd}
+              visits={visits}
             />
           </div>
         </div>
@@ -1652,17 +1800,17 @@ export function PatientDashboard() {
                     <tbody>
                       {visits.map((visit, index) => (
                         <tr
-                          key={visit.visitId}
+                          key={visit.id}
                             className={index % 2 === 0 
                               ? "bg-white hover:bg-blue-50/50 transition-colors" 
                               : "bg-blue-50/20 hover:bg-blue-50/50 transition-colors"}
                         >
-                          <td className="p-4 align-middle font-medium">{visit.visitId}</td>
-                          <td className="p-4 align-middle">{visit.date}</td>
-                          <td className="p-4 align-middle">{visit.reason}</td>
-                          <td className="p-4 align-middle">{visit.doctor}</td>
-                          <td className="p-4 align-middle">{visit.department}</td>
-                          <td className="p-4 align-middle text-muted-foreground">{visit.notes}</td>
+                          <td className="p-4 align-middle font-medium">{visit.visit_id}</td>
+                          <td className="p-4 align-middle">{new Date(visit.visit_date).toLocaleDateString('en-GB')}</td>
+                          <td className="p-4 align-middle">{visit.visit_reason}</td>
+                          <td className="p-4 align-middle">{visit.appointment_with}</td>
+                          <td className="p-4 align-middle">{visit.visit_type}</td>
+                          <td className="p-4 align-middle text-muted-foreground">{visit.diagnosis}</td>
                         </tr>
                       ))}
                     </tbody>
