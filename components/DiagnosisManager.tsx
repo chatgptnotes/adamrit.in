@@ -365,25 +365,27 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
 
   const addComplicationToPatient = async (complication: Complication, diagnosisId?: number) => {
     try {
-      const { data, error } = await supabase
-        .from('patient_complications')
-        .insert({
-          patient_unique_id: patientUniqueId,
-          complication_id: complication.id,
-          diagnosis_id: diagnosisId,
-          visit_id: visitId,
-          status: 'active',
-          occurred_date: new Date().toISOString().split('T')[0]
-        })
-        .select(`
-          *,
-          complication:complication_id (*)
-        `)
-        .single();
+      // Check if complication already added
+      if (patientComplications.find(c => c.complication.id === complication.id)) {
+        toast({
+          title: "Already added",
+          description: "This complication is already in the patient's record",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      if (error) throw error;
+      // For now, store in local state (until patient_complications table is created)
+      const newPatientComplication: PatientComplication = {
+        id: Date.now(), // temporary ID
+        complication: complication,
+        status: 'active',
+        occurred_date: new Date().toISOString().split('T')[0],
+        notes: '',
+        diagnosis_id: diagnosisId
+      };
       
-      setPatientComplications(prev => [data, ...prev]);
+      setPatientComplications(prev => [newPatientComplication, ...prev]);
       setComplicationSearch('');
       setShowComplicationResults(false);
       
@@ -484,29 +486,13 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
     });
   };
 
-  const removeComplication = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from('patient_complications')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      setPatientComplications(prev => prev.filter(c => c.id !== id));
-      
-      toast({
-        title: "Success",
-        description: "Complication removed"
-      });
-    } catch (error) {
-      console.error('Error removing complication:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove complication",
-        variant: "destructive"
-      });
-    }
+  const removeComplication = (id: number) => {
+    setPatientComplications(prev => prev.filter(c => c.id !== id));
+    
+    toast({
+      title: "Success",
+      description: "Complication removed"
+    });
   };
 
   const getSeverityColor = (severity: string) => {
