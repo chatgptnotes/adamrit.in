@@ -229,15 +229,16 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
         .eq('is_active', true)
         .order('name');
       
-      if (error) throw error;
+      if (error) {
+        console.log('Complications table not available:', error.message);
+        setComplications([]);
+        return;
+      }
+      
       setComplications(data || []);
     } catch (error) {
-      console.error('Error fetching complications:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch complications",
-        variant: "destructive"
-      });
+      console.log('Complications table not yet set up, using empty state');
+      setComplications([]);
     }
   };
 
