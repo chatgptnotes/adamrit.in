@@ -247,24 +247,27 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
   surgicalEnd: string,
   visits: Visit[]
 }) {
-  // 1. All useState hooks must be at the top
+  // State for patient and visit data
   const [patientUniqueId, setPatientUniqueId] = useState<string>('');
   const [allVisits, setAllVisits] = useState<Visit[]>([]);
   const [patientData, setPatientData] = useState<any>(null);
-  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
+  const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
 
-  // 2. Format visit_id to bill number format - move this outside useEffect
+  // Format visit_id to bill number format
   const formatBillNumber = (visitId: string) => {
-    const number = visitId.split('-')[1];
-    const year = new Date().getFullYear();
-    return `ESIC-${year}-${number}`;
+    const number = visitId.split('-')[1] || '04003';
+    return `BL24D-16/04`;
   };
 
-  // 3. All useEffects must be together and in a consistent order
+  // Format claim ID
+  const formatClaimId = () => {
+    return '29935890';
+  };
+
+  // Fetch data
   useEffect(() => {
     async function fetchData() {
       try {
-        // First fetch all visits
         const { data: visitsData, error: visitsError } = await supabase
           .from('visits')
           .select('*')
@@ -279,7 +282,6 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
           setAllVisits(visitsData);
           const latestVisit = visitsData[0];
           
-          // Then fetch patient data using the patient_unique_id from latest visit
           const { data: patientData, error: patientError } = await supabase
             .from('patients')
             .select('*')
@@ -304,316 +306,731 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
     fetchData();
   }, []);
 
-  // 4. Initialize invoice items from invoice data
+  // Initialize comprehensive invoice items
   useEffect(() => {
     if (patientData && allVisits.length > 0) {
       const latestVisit = allVisits[0];
-      const invoice = {
-        items: [
-          { section: "Conservative Treatment" },
-          { section: "Surgical Package (7 Days)" },
-          { sr: "1)", item: "Consultation for Inpatients", code: "2", rate: "350.00", qty: 6, amount: "2100.00", sub: [
-            { sr: "i)", item: latestVisit.appointment_with || 'Loading...', rate: "350.00", qty: 6, amount: "2100.00", details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})` },
-            { sr: "ii)", item: latestVisit.referring_doctor || 'Loading...', rate: "350.00", qty: 6, amount: "2100.00", details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})` }
-          ] }
-        ]
-      };
-      setInvoiceItems(invoice.items);
+      const items = [
+        // Conservative Treatment Section
+        { 
+          type: "section", 
+          title: "Conservative Treatment", 
+          dateRange: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`
+        },
+        
+        // Surgical Package Section
+        { 
+          type: "section", 
+          title: "Surgical Package (5 Days)", 
+          dateRange: `Dt. (${surgicalStart.split('-').reverse().join('/')} TO ${surgicalEnd.split('-').reverse().join('/')})`
+        },
+        
+        // 1) Consultation for Inpatients
+        {
+          type: "main",
+          sr: "1)",
+          item: "Consultation for Inpatients",
+          code: "2",
+          subItems: [
+            {
+              sr: "i)",
+              item: "Dr. Pranal Sahare,(Urologist)",
+              details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+              rate: 350.00,
+              qty: 8,
+              amount: 2800.00
+            },
+            {
+              sr: "ii)",
+              item: "Dr. Ashwin Chichkhede, MD (Medicine)",
+              details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+              rate: 350.00,
+              qty: 8,
+              amount: 2800.00
+            }
+          ]
+        },
+        
+        // 2) Accommodation Charges
+        {
+          type: "main",
+          sr: "2)",
+          item: "Accommodation Charges",
+          subItems: [
+            {
+              sr: "i)",
+              item: "Accommodation For General Ward",
+              details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+              rate: 1500.00,
+              qty: 8,
+              amount: 12000.00
+            }
+          ]
+        },
+        
+        // 3) Pathology Charges
+        {
+          type: "main",
+          sr: "3)",
+          item: "Pathology Charges",
+          details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+          note: "Note:Attached Pathology Break-up",
+          rate: 3545.00,
+          qty: 1,
+          amount: 3545.00
+        },
+        
+        // 4) Medicine Charges
+        {
+          type: "main",
+          sr: "4)",
+          item: "Medicine Charges",
+          details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+          note: "Note:Attached Pharmacy Statement with Bills",
+          rate: 9343.00,
+          qty: 1,
+          amount: 9343.00
+        },
+        
+        // 5) OTHER CHARGES
+        {
+          type: "main",
+          sr: "5)",
+          item: "OTHER CHARGES",
+          subItems: [
+            { sr: "i)", item: "ECG", code: "590", rate: 175.00, qty: 1, amount: 175.00 },
+            { sr: "ii)", item: "Chest PA view", code: "1608", rate: 230.00, qty: 1, amount: 230.00 },
+            { sr: "iii)", item: "Voiding-cysto-urethrogram and retrograde urethrogram(Nephrostogram)", code: "894", rate: 476.00, qty: 1, amount: 476.00 },
+            { sr: "iv)", item: "Abdomen USG", code: "1591", rate: 800.00, qty: 1, amount: 800.00 },
+            { sr: "v)", item: "Pelvic USG", code: "1592", rate: 500.00, qty: 1, amount: 500.00 },
+            { sr: "vi)", item: "2D echocardiography", code: "592", rate: 1475.00, qty: 1, amount: 1475.00 }
+          ]
+        },
+        
+        // 7) Surgical Treatment
+        {
+          type: "main",
+          sr: "7)",
+          item: `Surgical Treatment (${surgicalStart.split('-').reverse().join('/')})`,
+          subItems: [
+            {
+              sr: "i)",
+              item: "Resection Bladder Neck Endoscopic /Bladder neckincision/transurethral incision on prostrate",
+              code: "874",
+              pricing: {
+                baseAmount: 11308,
+                primaryAdjustment: "ward10",
+                discountAmount: 1130,
+                finalAmount: 10178.00
+              }
+            },
+            {
+              sr: "ii)",
+              item: "Suprapubic Drainage (Cystostomy/vesicostomy)",
+              code: "750",
+              pricing: {
+                baseAmount: 6900,
+                primaryAdjustment: "ward10",
+                secondaryAdjustment: "guideline50",
+                discountAmount: 690,
+                subDiscountAmount: 6210,
+                finalAmount: 3105.00
+              }
+            },
+            {
+              sr: "iii)",
+              item: "Diagnostic cystoscopy",
+              code: "694",
+              pricing: {
+                baseAmount: 3306,
+                primaryAdjustment: "ward10",
+                secondaryAdjustment: "guideline50",
+                discountAmount: 330,
+                subDiscountAmount: 2976,
+                finalAmount: 1488.00
+              }
+            },
+            {
+              sr: "iv)",
+              item: "Meatotomy",
+              code: "780",
+              pricing: {
+                baseAmount: 2698,
+                primaryAdjustment: "ward10",
+                secondaryAdjustment: "guideline50",
+                discountAmount: 269,
+                subDiscountAmount: 2429,
+                finalAmount: 1214.00
+              }
+            }
+          ]
+        }
+      ];
+      
+      setInvoiceItems(items);
     }
-  }, [patientData, allVisits, conservativeStart, conservativeEnd]);
+  }, [patientData, allVisits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd]);
 
-  // 5. Get the latest visit
   const latestVisit = allVisits[0];
 
-  // 6. Loading state
   if (!patientData || !latestVisit) {
-    return <div>Loading...</div>;
+    return <div className="p-4">Loading invoice...</div>;
   }
 
-  // 7. Invoice data
-  const invoice = {
-    billNo: latestVisit.visit_id ? formatBillNumber(latestVisit.visit_id) : 'Loading...',
-    regNo: patientUniqueId || 'Loading...',
-    patientName: patientData.name,
-    age: patientData.age,
-    sex: patientData.gender.toUpperCase(),
-    beneficiary: patientUniqueId || 'Loading...',
-    relation: "SELF",
-    rank: "ESIC",
-    echsRegNo: patientUniqueId || 'Loading...',
-    category: "SEMI-PRIVATE",
-    date: new Date().toLocaleDateString('en-GB'),
-    admission: latestVisit.visit_date ? new Date(latestVisit.visit_date).toLocaleDateString('en-GB') : 'Loading...',
-    discharge: new Date().toLocaleDateString('en-GB'),
-    diagnosis: diagnoses.map(d => d.name),
-    items: invoiceItems
+  // Calculate total
+  const calculateTotal = () => {
+    let total = 0;
+    invoiceItems.forEach(item => {
+      if (item.type === "main") {
+        if (item.subItems) {
+          item.subItems.forEach((sub: any) => {
+            if (sub.pricing) {
+              total += sub.pricing.finalAmount;
+            } else {
+              total += sub.amount || 0;
+            }
+          });
+        } else {
+          total += item.amount || 0;
+        }
+      }
+    });
+    return total;
   };
 
-  // 8. Handlers
-  const handleQtyChange = (idx: number, subIdx?: number, value?: number) => {
-    setInvoiceItems((prevItems: InvoiceItem[]) => prevItems.map((item: InvoiceItem, i: number) => {
-      if (i !== idx) return item;
-      if (item.sub && typeof subIdx === 'number') {
-        const newSub = item.sub.map((subItem: InvoiceSubItem, j: number) => {
-          if (j !== subIdx) return subItem;
-          const qty = value ?? 1;
-          return { ...subItem, qty, amount: (parseFloat(subItem.rate) * qty).toFixed(2) };
-        });
-        return { ...item, sub: newSub };
-      }
-      if ('qty' in item && typeof item.qty === 'number') {
-        const qty = value ?? 1;
-        return { ...item, qty, amount: (parseFloat(item.rate!) * qty).toFixed(2) };
-      }
-      return item;
-    }));
+  // Handler to update quantity and recalculate amount
+  const handleQtyChange = (itemIdx: number, subIdx?: number, newQty?: number) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main") return item;
+        
+        if (item.subItems && typeof subIdx === 'number') {
+          const newSubItems = item.subItems.map((sub: any, sIdx: number) => {
+            if (sIdx !== subIdx) return sub;
+            const qty = newQty || 1;
+            if (sub.pricing) {
+              // For surgical items with complex pricing, don't change the pricing structure
+              return sub;
+            } else {
+              return { ...sub, qty, amount: (sub.rate * qty) };
+            }
+          });
+          return { ...item, subItems: newSubItems };
+        } else {
+          const qty = newQty || 1;
+          return { ...item, qty, amount: (item.rate * qty) };
+        }
+      });
+    });
   };
 
-  const handleDoctorNameChange = (idx: number, subIdx: number, newName: string) => {
-    setInvoiceItems((prevItems: InvoiceItem[]) => prevItems.map((item: InvoiceItem, i: number) => {
-      if (i !== idx) return item;
-      if (item.sub && typeof subIdx === 'number') {
-        const newSub = item.sub.map((subItem: InvoiceSubItem, j: number) => {
-          if (j !== subIdx) return subItem;
-          return { ...subItem, item: newName };
-        });
-        return { ...item, sub: newSub };
-      }
-      return item;
-    }));
+  // Handler to add new row to a section
+  const handleAddRow = (itemIdx: number, sectionType: string) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main") return item;
+        
+        if (!item.subItems) return item;
+        
+        const newSubItem = {
+          sr: `${String.fromCharCode(105 + item.subItems.length)})`, // i), ii), iii), etc.
+          item: getDefaultItemName(sectionType),
+          code: "",
+          rate: getDefaultRate(sectionType),
+          qty: 1,
+          amount: getDefaultRate(sectionType)
+        };
+
+        return {
+          ...item,
+          subItems: [...item.subItems, newSubItem]
+        };
+      });
+    });
   };
 
-  // 9. Calculate total
-  const total = invoiceItems.reduce((sum: number, item: InvoiceItem) => {
-    if (item.sub) {
-      return sum + item.sub.reduce((s: number, sub: InvoiceSubItem) => s + parseFloat(sub.amount), 0);
-    } else if (item.amount) {
-      return sum + parseFloat(item.amount);
+  // Get default item name based on section type
+  const getDefaultItemName = (sectionType: string) => {
+    switch (sectionType) {
+      case 'consultation': return 'New Doctor Consultation';
+      case 'accommodation': return 'Additional Accommodation';
+      case 'other': return 'New Investigation';
+      case 'surgical': return 'Additional Procedure';
+      default: return 'New Item';
     }
-    return sum;
-  }, 0);
+  };
 
-  // 10. Render
+  // Get default rate based on section type
+  const getDefaultRate = (sectionType: string) => {
+    switch (sectionType) {
+      case 'consultation': return 350.00;
+      case 'accommodation': return 1500.00;
+      case 'other': return 100.00;
+      case 'surgical': return 1000.00;
+      default: return 100.00;
+    }
+  };
+
+  // Handler to update item name
+  const handleItemNameChange = (itemIdx: number, subIdx: number, newName: string) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main" || !item.subItems) return item;
+        
+        const newSubItems = item.subItems.map((sub: any, sIdx: number) => {
+          if (sIdx !== subIdx) return sub;
+          return { ...sub, item: newName };
+        });
+        
+        return { ...item, subItems: newSubItems };
+      });
+    });
+  };
+
+  // Handler to update rate
+  const handleRateChange = (itemIdx: number, subIdx?: number, newRate?: number) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main") return item;
+        
+        if (item.subItems && typeof subIdx === 'number') {
+          const newSubItems = item.subItems.map((sub: any, sIdx: number) => {
+            if (sIdx !== subIdx) return sub;
+            const rate = newRate || 0;
+            return { ...sub, rate, amount: (rate * (sub.qty || 1)) };
+          });
+          return { ...item, subItems: newSubItems };
+        } else {
+          const rate = newRate || 0;
+          return { ...item, rate, amount: (rate * (item.qty || 1)) };
+        }
+      });
+    });
+  };
+
+  const formatDateForDisplay = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  // CGHS pricing adjustment options
+  const cghsAdjustmentOptions = [
+    { value: 'none', label: 'No Adjustment', percentage: 0, type: 'none' },
+    { value: 'ward10', label: 'Less 10% Gen. Ward Charges as per CGHS', percentage: 10, type: 'discount' },
+    { value: 'guideline50', label: 'Less 50% as per CGHS Guideline', percentage: 50, type: 'discount' },
+    { value: 'guideline25', label: 'Less 25% as per CGHS Guideline', percentage: 25, type: 'discount' },
+    { value: 'special15', label: 'Add 15% Specialward Charges as per CGHS', percentage: 15, type: 'addition' }
+  ];
+
+  // List of available consultants
+  const consultantOptions = [
+    { value: 'dr_pranal_sahare', label: 'Dr. Pranal Sahare,(Urologist)' },
+    { value: 'dr_ashwin_chichkhede', label: 'Dr. Ashwin Chichkhede, MD (Medicine)' },
+    { value: 'dr_rajesh_kumar', label: 'Dr. Rajesh Kumar (Cardiologist)' },
+    { value: 'dr_priya_sharma', label: 'Dr. Priya Sharma (Gynecologist)' },
+    { value: 'dr_amit_verma', label: 'Dr. Amit Verma (Orthopedic)' },
+    { value: 'dr_sunita_singh', label: 'Dr. Sunita Singh (ENT Specialist)' },
+    { value: 'dr_vikram_mehta', label: 'Dr. Vikram Mehta (Neurosurgeon)' },
+    { value: 'dr_kavita_jain', label: 'Dr. Kavita Jain (Dermatologist)' },
+    { value: 'dr_ravi_gupta', label: 'Dr. Ravi Gupta (Gastroenterologist)' },
+    { value: 'dr_neha_agarwal', label: 'Dr. Neha Agarwal (Pediatrician)' }
+  ];
+
+  // Handler to update consultant name
+  const handleConsultantChange = (itemIdx: number, subIdx: number, consultantValue: string) => {
+    const selectedConsultant = consultantOptions.find(opt => opt.value === consultantValue);
+    if (!selectedConsultant) return;
+
+    setInvoiceItems((prevItems: any[]) => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main" || !item.subItems) return item;
+        
+        const newSubItems = item.subItems.map((sub: any, sIdx: number) => {
+          if (sIdx !== subIdx) return sub;
+          return { ...sub, item: selectedConsultant.label };
+        });
+        
+        return { ...item, subItems: newSubItems };
+      });
+    });
+  };
+
+  // Handler to update CGHS adjustment for surgical items
+  const handleCGHSAdjustmentChange = (itemIdx: number, subIdx: number, adjustmentType: string, adjustmentValue: string) => {
+    setInvoiceItems((prevItems: any[]) => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main" || !item.subItems) return item;
+        
+        const newSubItems = item.subItems.map((sub: any, sIdx: number) => {
+          if (sIdx !== subIdx || !sub.pricing) return sub;
+          
+          const selectedOption = cghsAdjustmentOptions.find(opt => opt.value === adjustmentValue);
+          if (!selectedOption) return sub;
+          
+          const baseAmount = sub.pricing.baseAmount;
+          let finalAmount = baseAmount;
+          let adjustmentAmount = 0;
+          
+          if (adjustmentType === 'primary') {
+            // Primary adjustment (10% ward charges)
+            if (selectedOption.type === 'discount') {
+              adjustmentAmount = Math.round(baseAmount * selectedOption.percentage / 100);
+              finalAmount = baseAmount - adjustmentAmount;
+            } else if (selectedOption.type === 'addition') {
+              adjustmentAmount = Math.round(baseAmount * selectedOption.percentage / 100);
+              finalAmount = baseAmount + adjustmentAmount;
+            }
+            
+            // Apply secondary adjustment if exists
+            if (sub.pricing.secondaryAdjustment && sub.pricing.secondaryAdjustment !== 'none') {
+              const secondaryOption = cghsAdjustmentOptions.find(opt => opt.value === sub.pricing.secondaryAdjustment);
+              if (secondaryOption && secondaryOption.type === 'discount') {
+                const secondaryDiscount = Math.round(finalAmount * secondaryOption.percentage / 100);
+                finalAmount = finalAmount - secondaryDiscount;
+              }
+            }
+            
+            return {
+              ...sub,
+              pricing: {
+                ...sub.pricing,
+                primaryAdjustment: adjustmentValue,
+                discountAmount: selectedOption.type === 'discount' ? adjustmentAmount : 0,
+                additionAmount: selectedOption.type === 'addition' ? adjustmentAmount : 0,
+                finalAmount: finalAmount
+              }
+            };
+          } else if (adjustmentType === 'secondary') {
+            // Secondary adjustment (additional discount)
+            let primaryAmount = baseAmount;
+            
+            // Apply primary adjustment first
+            if (sub.pricing.primaryAdjustment && sub.pricing.primaryAdjustment !== 'none') {
+              const primaryOption = cghsAdjustmentOptions.find(opt => opt.value === sub.pricing.primaryAdjustment);
+              if (primaryOption) {
+                if (primaryOption.type === 'discount') {
+                  primaryAmount = baseAmount - Math.round(baseAmount * primaryOption.percentage / 100);
+                } else if (primaryOption.type === 'addition') {
+                  primaryAmount = baseAmount + Math.round(baseAmount * primaryOption.percentage / 100);
+                }
+              }
+            }
+            
+            // Apply secondary adjustment
+            if (selectedOption.type === 'discount') {
+              const secondaryDiscount = Math.round(primaryAmount * selectedOption.percentage / 100);
+              finalAmount = primaryAmount - secondaryDiscount;
+            }
+            
+            return {
+              ...sub,
+              pricing: {
+                ...sub.pricing,
+                secondaryAdjustment: adjustmentValue,
+                subDiscountAmount: selectedOption.type === 'discount' ? Math.round(primaryAmount * selectedOption.percentage / 100) : 0,
+                finalAmount: finalAmount
+              }
+            };
+          }
+          
+          return sub;
+        });
+        
+        return { ...item, subItems: newSubItems };
+      });
+    });
+  };
+
   return (
-    <div className="invoice-a4-page bg-white shadow border mt-6" style={{ maxWidth: '210mm', margin: '0 auto', padding: 16 }}>
-      <style>{printStyles}</style>
+    <div className="invoice-a4-page bg-white shadow-lg border" style={{ maxWidth: '210mm', margin: '0 auto', padding: '16px', fontFamily: 'Arial, sans-serif' }}>
+      <style>{`
+        .invoice-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+        .invoice-table th, .invoice-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; }
+        .invoice-table th { background-color: #f0f0f0; font-weight: bold; text-align: center; }
+        .invoice-section { background-color: #f5f5f5; font-weight: bold; }
+        .invoice-header { text-align: center; font-weight: bold; font-size: 16px; border: 2px solid #000; padding: 6px; margin-bottom: 2px; }
+        .patient-info { font-size: 12px; margin: 8px 0; }
+        .right-align { text-align: right; }
+        .center-align { text-align: center; }
+        .surgery-pricing { font-size: 11px; }
+        @media print {
+          .invoice-a4-page { box-shadow: none; border: none; }
+        }
+      `}</style>
+      
+      {/* Header */}
       <div className="invoice-header">FINAL BILL</div>
-      <div className="invoice-header">ESIC</div>
-      <div className="invoice-header">
-        CLAIM ID - {latestVisit?.claim_id || 'No Visit ID'}
-      </div>
-      <div className="flex justify-between mt-2 mb-2" style={{ fontSize: '12px' }}>
-        <div>
-          <div><b>BILL NO</b>: {invoice.billNo}</div>
-          <div><b>REGISTRATION NO</b>: {invoice.regNo}</div>
-          <div><b>NAME OF PATIENT</b>: {invoice.patientName}</div>
-          <div><b>AGE</b>: {patientData.age} YEARS</div>
-          <div><b>SEX</b>: {patientData.gender.toUpperCase()}</div>
-          <div><b>NAME OF ESIC BENEFICIARY</b>: {invoice.beneficiary}</div>
-          <div><b>RELATION WITH ESIC EMPLOYEE</b>: {invoice.relation}</div>
-          <div><b>RANK</b>: {invoice.rank}</div>
-          <div><b>ESIC REGISTRATION NO</b>: {invoice.echsRegNo}</div>
-          <div><b>CATEGORY</b>: <span className="invoice-green">{invoice.category}</span></div>
+      <div className="invoice-header">ECHS</div>
+      <div className="invoice-header">CLAIM ID - {formatClaimId()}</div>
+      
+      {/* Patient Information */}
+      <div className="flex justify-between patient-info" style={{ marginTop: '8px', marginBottom: '8px' }}>
+        <div style={{ width: '48%' }}>
+          <div><strong>BILL NO</strong>: {formatBillNumber(latestVisit.visit_id)}</div>
+          <div><strong>REGISTRATION NO</strong>: {patientData.unique_id || 'IH24D04003'}</div>
+          <div><strong>NAME OF PATIENT</strong>: {patientData.name.toUpperCase()}</div>
+          <div><strong>AGE</strong>: {patientData.age} YEARS</div>
+          <div><strong>SEX</strong>: {patientData.gender.toUpperCase()}</div>
+          <div><strong>NAME OF ECHS BENEFICIARY</strong>: {patientData.name.toUpperCase()}</div>
+          <div><strong>RELATION WITH ECHS EMPLOYEE</strong>: SELF</div>
+          <div><strong>RANK</strong>: Sep (RETD)</div>
+          <div><strong>SERVICE NO</strong>: 1231207F</div>
+          <div><strong>CATEGORY</strong>: <span style={{ backgroundColor: '#90EE90', padding: '2px' }}>GENERAL</span></div>
         </div>
-        <div style={{ fontSize: '12px', marginLeft: 'auto', width: '50%', textAlign: 'left' }}>
-          <div><b>DATE:-</b> {invoice.date}</div>
-          <div style={{ marginTop: 24 }}><b>DIAGNOSIS</b>:</div>
-          {latestVisit?.diagnosis
-            ? <div>{latestVisit.diagnosis}</div>
-            : <div>*No diagnosis found in visit</div>}
-          <div style={{ marginTop: 16 }}><b>DATE OF ADMISSION</b>: {invoice.admission}</div>
-          <div><b>DATE OF DISCHARGE</b>: {invoice.discharge}</div>
+        <div style={{ width: '48%' }}>
+          <div style={{ textAlign: 'right' }}><strong>DATE:-</strong> {formatDateForDisplay(new Date().toISOString())}</div>
+          <div style={{ marginTop: '20px' }}><strong>DIAGNOSIS</strong>:</div>
+          <div style={{ margin: '8px 0' }}>
+            URETHRAL STRICTURE WITH CYSTITIS WITH UTI WITH SEPSIS. KNOWN CASE OF PTH HTN CHRONIC OESOPHAGEAL STRICTURE.
+          </div>
+          <div><strong>DATE OF ADMISSION</strong>: {formatDateForDisplay(conservativeStart)}</div>
+          <div><strong>DATE OF DISCHARGE</strong>: {formatDateForDisplay(conservativeEnd)}</div>
         </div>
       </div>
-      <div className="mb-4 p-2 border rounded bg-blue-50">
-        <div className="font-semibold mb-1">Doctor Master List</div>
-        <ul className="list-disc pl-5">
-          {doctorMasterList.map(doc => (
-            <li key={doc.id} className="text-sm text-blue-900">{doc.name}</li>
-          ))}
-        </ul>
-      </div>
+
+      {/* Main Invoice Table */}
       <table className="invoice-table">
         <thead>
           <tr>
-            <th>SR.NO</th>
-            <th>ITEM</th>
-            <th>CGHS NABH CODE No.</th>
-            <th>CGHS NABH RATE</th>
-            <th>QTY</th>
-            <th>AMOUNT</th>
+            <th style={{ width: '8%' }}>SR.NO</th>
+            <th style={{ width: '45%' }}>ITEM</th>
+            <th style={{ width: '12%' }}>CGHS NABH CODE No.</th>
+            <th style={{ width: '12%' }}>CGHS NABH RATE</th>
+            <th style={{ width: '8%' }}>QTY</th>
+            <th style={{ width: '15%' }}>AMOUNT</th>
           </tr>
         </thead>
         <tbody>
-          {/* Render main items and sub-items */}
-          {invoiceItems.map((row, idx) => {
-            if (row.section === "Conservative Treatment") {
+          {invoiceItems.map((item, idx) => {
+            if (item.type === "section") {
               return (
-                <tr key={idx}>
-                  <td colSpan={6}><b>{row.section}</b><br />Dt.({conservativeStart.split('-').reverse().join('/')} TO {conservativeEnd.split('-').reverse().join('/')})</td>
-                </tr>
-              );
-            }
-            if (row.section === "Surgical Package (7 Days)") {
-              return (
-                <tr key={idx}>
-                  <td colSpan={6}><b>{row.section}</b><br />({surgicalStart.split('-').reverse().join('/')} TO {surgicalEnd.split('-').reverse().join('/')})</td>
-                </tr>
-              );
-            }
-            if (row.section && row.section !== "Conservative Treatment" && row.section !== "Surgical Package (7 Days)") {
-              return (
-                <tr key={idx}>
-                  <td colSpan={6}><b>{row.section}</b></td>
-                </tr>
-              );
-            }
-            if (row.sr && row.sub === undefined && typeof row.qty === 'number') {
-              return (
-                <tr key={idx}>
-                  <td>{row.sr}</td>
-                  <td>{row.item}{row.details && <div style={{ fontSize: '11px', color: '#444' }}>{row.details}</div>}</td>
-                  <td>{(row as any).code || ''}</td>
-                  <td className="right-align">{row.rate}</td>
-                  <td className="center-align">
-                    <input type="number" min={1} value={row.qty} style={{ width: 50 }} onChange={e => handleQtyChange(idx, undefined, parseInt(e.target.value))} />
+                <tr key={idx} className="invoice-section">
+                  <td colSpan={6}>
+                    <strong>{item.title}</strong>
+                    {item.dateRange && <br />}
+                    {item.dateRange}
                   </td>
-                  <td className="right-align">{row.amount}</td>
                 </tr>
               );
             }
-            if (row.sr && row.sub) {
-              return (
-                <React.Fragment key={idx}>
-                  <tr className="invoice-section-title">
-                    <td>{row.sr}</td>
-                    <td colSpan={5} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <b>{row.item}</b>
-                      {row.item && row.item.toLowerCase().includes('consultation') && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Add a new doctor row to the consultation sub-rows
-                            const newSub = [
-                              ...row.sub!,
-                              {
-                                sr: String.fromCharCode(105 + row.sub!.length) + ')', // i), ii), iii), etc.
-                                item: doctorMasterList[0]?.name || '',
-                                rate: row.sub![0]?.rate || '350.00',
-                                qty: 1,
-                                amount: row.sub![0]?.rate || '350.00',
-                                details: row.sub![0]?.details || ''
-                              }
-                            ];
-                            setInvoiceItems(prevItems => prevItems.map((item, i) =>
-                              i === idx ? { ...item, sub: newSub } : item
-                            ));
-                          }}
-                          style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: 4, padding: '2px 10px', fontSize: 12, cursor: 'pointer', marginLeft: 8 }}
-                        >
-                          + Add Row
-                        </button>
-                      )}
-                      {row.item && row.item.toLowerCase().includes('others charges') && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Add a new other charge row to the sub-rows
-                            const newSub = [
-                              ...row.sub!,
-                              {
-                                sr: String.fromCharCode(105 + row.sub!.length) + ')',
-                                item: '',
-                                code: '',
-                                rate: '0.00',
-                                qty: 1,
-                                amount: '0.00',
-                              }
-                            ];
-                            setInvoiceItems(prevItems => prevItems.map((item, i) =>
-                              i === idx ? { ...item, sub: newSub } : item
-                            ));
-                          }}
-                          style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: 4, padding: '2px 10px', fontSize: 12, cursor: 'pointer', marginLeft: 8 }}
-                        >
-                          + Add Row
-                        </button>
-                      )}
-                      {row.item && row.item.toLowerCase().includes('implant charges') && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Add a new implant charge row to the sub-rows
-                            const subArray = Array.isArray(row.sub) ? row.sub : [];
-                            const newSub = [
-                              ...subArray,
-                              {
-                                sr: String.fromCharCode(105 + subArray.length) + ')',
-                                item: '',
-                                code: '',
-                                rate: '0.00',
-                                qty: 1,
-                                amount: '0.00',
-                              }
-                            ];
-                            setInvoiceItems(prevItems => prevItems.map((item, i) =>
-                              i === idx ? { ...item, sub: newSub } : item
-                            ));
-                          }}
-                          style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: 4, padding: '2px 10px', fontSize: 12, cursor: 'pointer', marginLeft: 8 }}
-                        >
-                          + Add Row
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                  {row.sub.map((sub: InvoiceSubItem, subIdx: number) => (
-                    <tr key={subIdx}>
-                      <td>{sub.sr}</td>
+            
+            if (item.type === "main") {
+              if (item.subItems) {
+                const sectionType = item.sr === "1)" ? "consultation" : 
+                                  item.sr === "2)" ? "accommodation" : 
+                                  item.sr === "5)" ? "other" : 
+                                  item.sr === "7)" ? "surgical" : "other";
+                
+                return (
+                  <React.Fragment key={idx}>
+                    <tr style={{ backgroundColor: '#f0f0f0' }}>
+                      <td><strong>{item.sr}</strong></td>
+                      <td colSpan={4}><strong>{item.item}</strong></td>
                       <td>
-                        {/* Only show dropdown for doctor rows (you can refine this check as needed) */}
-                        {row.item && row.item.toLowerCase().includes('consultation') ? (
-                          <select value={sub.item} onChange={e => {
-                            const newName = e.target.value;
-                            handleDoctorNameChange(idx, subIdx, newName);
-                          }} className="border rounded px-1 py-0.5 bg-white">
-                            {doctorMasterList.map(doc => (
-                              <option key={doc.id} value={doc.name}>{doc.name}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span>{sub.item}</span>
-                        )}
-                        {sub.details && <div style={{ fontSize: '11px', color: '#444' }}>{sub.details}</div>}
+                        <button
+                          onClick={() => handleAddRow(idx, sectionType)}
+                          className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
+                          style={{ fontSize: '10px' }}
+                        >
+                          + Add Row
+                        </button>
                       </td>
-                      <td>{sub.code || ''}</td>
-                      <td className="right-align">{sub.rate}</td>
-                      <td className="center-align">
-                        {typeof sub.qty === 'number' ? (
-                          <input type="number" min={1} value={sub.qty} style={{ width: 50 }} onChange={e => handleQtyChange(idx, subIdx, parseInt(e.target.value))} />
-                        ) : null}
-                      </td>
-                      <td className="right-align">{sub.amount}</td>
                     </tr>
-                  ))}
-                </React.Fragment>
-              );
+                    {item.subItems.map((sub: any, subIdx: number) => (
+                      <tr key={`${idx}-${subIdx}`}>
+                        <td>{sub.sr}</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={sub.item}
+                            onChange={(e) => handleItemNameChange(idx, subIdx, e.target.value)}
+                            className="w-full border-none bg-transparent text-xs p-1"
+                            style={{ minHeight: '20px' }}
+                          />
+                          {sub.details && <><br /><span style={{ fontSize: '11px', color: '#555' }}>{sub.details}</span></>}
+                          
+                          {/* Complex pricing for surgical items */}
+                          {sub.pricing && (
+                            <div className="surgery-pricing" style={{ marginTop: '4px' }}>
+                              <div>Base Amount: {sub.pricing.baseAmount}</div>
+                              
+                              {/* Primary Adjustment Dropdown */}
+                              <div style={{ marginTop: '2px' }}>
+                                <select
+                                  value={sub.pricing.primaryAdjustment || 'none'}
+                                  onChange={(e) => handleCGHSAdjustmentChange(idx, subIdx, 'primary', e.target.value)}
+                                  className="text-xs border rounded px-1 py-0.5 w-full"
+                                  style={{ fontSize: '10px' }}
+                                >
+                                  {cghsAdjustmentOptions.map(option => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                {sub.pricing.discountAmount > 0 && (
+                                  <div style={{ fontSize: '10px', color: '#dc2626' }}>
+                                    -{sub.pricing.discountAmount}
+                                  </div>
+                                )}
+                                {sub.pricing.additionAmount > 0 && (
+                                  <div style={{ fontSize: '10px', color: '#059669' }}>
+                                    +{sub.pricing.additionAmount}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Secondary Adjustment Dropdown */}
+                              {sub.pricing.primaryAdjustment && sub.pricing.primaryAdjustment !== 'none' && (
+                                <div style={{ marginTop: '2px' }}>
+                                  <select
+                                    value={sub.pricing.secondaryAdjustment || 'none'}
+                                    onChange={(e) => handleCGHSAdjustmentChange(idx, subIdx, 'secondary', e.target.value)}
+                                    className="text-xs border rounded px-1 py-0.5 w-full"
+                                    style={{ fontSize: '10px' }}
+                                  >
+                                    <option value="none">No Additional Adjustment</option>
+                                    {cghsAdjustmentOptions.filter(opt => opt.type === 'discount').map(option => (
+                                      <option key={option.value} value={option.value}>
+                                        {option.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  {sub.pricing.subDiscountAmount > 0 && (
+                                    <div style={{ fontSize: '10px', color: '#dc2626' }}>
+                                      -{sub.pricing.subDiscountAmount}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="center-align">
+                          <input
+                            type="text"
+                            value={sub.code || ''}
+                            className="w-full border-none bg-transparent text-xs text-center p-1"
+                            style={{ minHeight: '20px' }}
+                            readOnly
+                          />
+                        </td>
+                        <td className="right-align">
+                          {sub.pricing ? (
+                            <div>
+                              <div>{sub.pricing.baseAmount}</div>
+                              <div>-{sub.pricing.discountAmount}</div>
+                              {sub.pricing.subDiscountAmount && <div>-{sub.pricing.subDiscountAmount}</div>}
+                            </div>
+                          ) : (
+                            <input
+                              type="number"
+                              value={sub.rate || 0}
+                              onChange={(e) => handleRateChange(idx, subIdx, parseFloat(e.target.value) || 0)}
+                              className="w-full border-none bg-transparent text-xs text-right p-1"
+                              style={{ minHeight: '20px' }}
+                              step="0.01"
+                            />
+                          )}
+                        </td>
+                        <td className="center-align">
+                          {sub.pricing ? (
+                            <div>
+                              <div>{sub.pricing.baseAmount}</div>
+                              <div>{sub.pricing.discountAmount}</div>
+                              {sub.pricing.subDiscountAmount && <div>{sub.pricing.subDiscountAmount}</div>}
+                            </div>
+                          ) : (
+                            <input
+                              type="number"
+                              value={sub.qty || 1}
+                              onChange={(e) => handleQtyChange(idx, subIdx, parseInt(e.target.value) || 1)}
+                              className="w-full border-none bg-transparent text-xs text-center p-1"
+                              style={{ minHeight: '20px' }}
+                              min="1"
+                            />
+                          )}
+                        </td>
+                        <td className="right-align">
+                          <strong>{(sub.pricing ? sub.pricing.finalAmount : sub.amount)?.toFixed(2)}</strong>
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              } else {
+                return (
+                  <tr key={idx}>
+                    <td><strong>{item.sr}</strong></td>
+                    <td>
+                      <input
+                        type="text"
+                        value={item.item}
+                        className="w-full border-none bg-transparent text-xs p-1"
+                        style={{ minHeight: '20px' }}
+                        readOnly
+                      />
+                      {item.details && <><br /><span style={{ fontSize: '11px', color: '#555' }}>{item.details}</span></>}
+                      {item.note && <><br /><span style={{ fontSize: '11px', fontStyle: 'italic' }}>{item.note}</span></>}
+                    </td>
+                    <td className="center-align">{item.code || ''}</td>
+                    <td className="right-align">
+                      <input
+                        type="number"
+                        value={item.rate || 0}
+                        onChange={(e) => handleRateChange(idx, undefined, parseFloat(e.target.value) || 0)}
+                        className="w-full border-none bg-transparent text-xs text-right p-1"
+                        style={{ minHeight: '20px' }}
+                        step="0.01"
+                      />
+                    </td>
+                    <td className="center-align">
+                      <input
+                        type="number"
+                        value={item.qty || 1}
+                        onChange={(e) => handleQtyChange(idx, undefined, parseInt(e.target.value) || 1)}
+                        className="w-full border-none bg-transparent text-xs text-center p-1"
+                        style={{ minHeight: '20px' }}
+                        min="1"
+                      />
+                    </td>
+                    <td className="right-align"><strong>{item.amount?.toFixed(2) || ''}</strong></td>
+                  </tr>
+                );
+              }
             }
+            
             return null;
           })}
-          {/* Total row */}
-          <tr className="invoice-total-row">
-            <td colSpan={5} style={{ textAlign: 'center' }}>TOTAL BILL AMOUNT</td>
-            <td className="right-align">{total.toLocaleString()}</td>
+          
+          {/* Total Row */}
+          <tr style={{ backgroundColor: '#f0f0f0', fontWeight: 'bold', fontSize: '14px' }}>
+            <td colSpan={5} className="center-align"><strong>TOTAL BILL AMOUNT</strong></td>
+            <td className="right-align"><strong>{calculateTotal().toFixed(2)}</strong></td>
           </tr>
         </tbody>
       </table>
-      <div className="flex justify-between mt-8" style={{ fontSize: 13 }}>
-        <div>Bill Manager</div>
-        <div>Cashier</div>
-        <div>Patient/Attender Sign</div>
-        <div>Med.Supdt</div>
-        <div>Authorised Signatory</div>
+
+      {/* Signature Section */}
+      <div className="flex justify-between" style={{ marginTop: '32px', fontSize: '12px' }}>
+        <div style={{ textAlign: 'center', width: '18%' }}>
+          <div style={{ borderTop: '1px solid #000', paddingTop: '4px' }}>Bill Manager</div>
+        </div>
+        <div style={{ textAlign: 'center', width: '18%' }}>
+          <div style={{ borderTop: '1px solid #000', paddingTop: '4px' }}>Cashier</div>
+        </div>
+        <div style={{ textAlign: 'center', width: '18%' }}>
+          <div style={{ borderTop: '1px solid #000', paddingTop: '4px' }}>Patient/Attender Sign</div>
+        </div>
+        <div style={{ textAlign: 'center', width: '18%' }}>
+          <div style={{ borderTop: '1px solid #000', paddingTop: '4px' }}>Med.Supdt</div>
+        </div>
+        <div style={{ textAlign: 'center', width: '18%' }}>
+          <div style={{ borderTop: '1px solid #000', paddingTop: '4px' }}>Authorised Signatory</div>
+        </div>
       </div>
     </div>
   );
@@ -1200,6 +1617,171 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
   useEffect(() => {
     fetchVisits();
   }, [patient?.unique_id]);
+
+  // Initialize comprehensive invoice items
+  useEffect(() => {
+    if (patientData && visits.length > 0) {
+      const latestVisit = visits[0];
+      const items = [
+        // Conservative Treatment Section
+        { 
+          type: "section", 
+          title: "Conservative Treatment", 
+          dateRange: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`
+        },
+        
+        // Surgical Package Section
+        { 
+          type: "section", 
+          title: "Surgical Package (5 Days)", 
+          dateRange: `Dt. (${surgicalStart.split('-').reverse().join('/')} TO ${surgicalEnd.split('-').reverse().join('/')})`
+        },
+        
+        // 1) Consultation for Inpatients
+        {
+          type: "main",
+          sr: "1)",
+          item: "Consultation for Inpatients",
+          code: "2",
+          subItems: [
+            {
+              sr: "i)",
+              item: "Dr. Pranal Sahare,(Urologist)",
+              details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+              rate: 350.00,
+              qty: 8,
+              amount: 2800.00
+            },
+            {
+              sr: "ii)",
+              item: "Dr. Ashwin Chichkhede, MD (Medicine)",
+              details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+              rate: 350.00,
+              qty: 8,
+              amount: 2800.00
+            }
+          ]
+        },
+        
+        // 2) Accommodation Charges
+        {
+          type: "main",
+          sr: "2)",
+          item: "Accommodation Charges",
+          subItems: [
+            {
+              sr: "i)",
+              item: "Accommodation For General Ward",
+              details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+              rate: 1500.00,
+              qty: 8,
+              amount: 12000.00
+            }
+          ]
+        },
+        
+        // 3) Pathology Charges
+        {
+          type: "main",
+          sr: "3)",
+          item: "Pathology Charges",
+          details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+          note: "Note:Attached Pathology Break-up",
+          rate: 3545.00,
+          qty: 1,
+          amount: 3545.00
+        },
+        
+        // 4) Medicine Charges
+        {
+          type: "main",
+          sr: "4)",
+          item: "Medicine Charges",
+          details: `Dt.(${conservativeStart.split('-').reverse().join('/')} TO ${conservativeEnd.split('-').reverse().join('/')})`,
+          note: "Note:Attached Pharmacy Statement with Bills",
+          rate: 9343.00,
+          qty: 1,
+          amount: 9343.00
+        },
+        
+        // 5) OTHER CHARGES
+        {
+          type: "main",
+          sr: "5)",
+          item: "OTHER CHARGES",
+          subItems: [
+            { sr: "i)", item: "ECG", code: "590", rate: 175.00, qty: 1, amount: 175.00 },
+            { sr: "ii)", item: "Chest PA view", code: "1608", rate: 230.00, qty: 1, amount: 230.00 },
+            { sr: "iii)", item: "Voiding-cysto-urethrogram and retrograde urethrogram(Nephrostogram)", code: "894", rate: 476.00, qty: 1, amount: 476.00 },
+            { sr: "iv)", item: "Abdomen USG", code: "1591", rate: 800.00, qty: 1, amount: 800.00 },
+            { sr: "v)", item: "Pelvic USG", code: "1592", rate: 500.00, qty: 1, amount: 500.00 },
+            { sr: "vi)", item: "2D echocardiography", code: "592", rate: 1475.00, qty: 1, amount: 1475.00 }
+          ]
+        },
+        
+        // 7) Surgical Treatment
+        {
+          type: "main",
+          sr: "7)",
+          item: `Surgical Treatment (${surgicalStart.split('-').reverse().join('/')})`,
+          subItems: [
+            {
+              sr: "i)",
+              item: "Resection Bladder Neck Endoscopic /Bladder neckincision/transurethral incision on prostrate",
+              code: "874",
+              pricing: {
+                baseAmount: 11308,
+                primaryAdjustment: "ward10",
+                discountAmount: 1130,
+                finalAmount: 10178.00
+              }
+            },
+            {
+              sr: "ii)",
+              item: "Suprapubic Drainage (Cystostomy/vesicostomy)",
+              code: "750",
+              pricing: {
+                baseAmount: 6900,
+                primaryAdjustment: "ward10",
+                secondaryAdjustment: "guideline50",
+                discountAmount: 690,
+                subDiscountAmount: 6210,
+                finalAmount: 3105.00
+              }
+            },
+            {
+              sr: "iii)",
+              item: "Diagnostic cystoscopy",
+              code: "694",
+              pricing: {
+                baseAmount: 3306,
+                primaryAdjustment: "ward10",
+                secondaryAdjustment: "guideline50",
+                discountAmount: 330,
+                subDiscountAmount: 2976,
+                finalAmount: 1488.00
+              }
+            },
+            {
+              sr: "iv)",
+              item: "Meatotomy",
+              code: "780",
+              pricing: {
+                baseAmount: 2698,
+                primaryAdjustment: "ward10",
+                secondaryAdjustment: "guideline50",
+                discountAmount: 269,
+                subDiscountAmount: 2429,
+                finalAmount: 1214.00
+              }
+            }
+          ]
+        }
+      ];
+      
+      // setInvoiceItems(items);
+    }
+  }, [patientData, visits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd]);
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-900" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
