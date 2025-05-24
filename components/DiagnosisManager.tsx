@@ -124,6 +124,8 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
   // Billing state
   const [billingId, setBillingId] = useState<number | null>(null);
   const [isSavingToBilling, setIsSavingToBilling] = useState(false);
+  const [existingBillingRecords, setExistingBillingRecords] = useState<any[]>([]);
+  const [isLoadingPatientData, setIsLoadingPatientData] = useState(true);
   
   // Form states
   const [newDiagnosis, setNewDiagnosis] = useState({
@@ -243,45 +245,106 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
   };
 
   const fetchPatientData = async () => {
+    setIsLoadingPatientData(true);
     try {
-      // Fetch patient diagnoses (with error handling for missing tables)
-      const { data: diagnosisData, error: diagnosisError } = await supabase
-        .from('patient_diagnosis')
-        .select(`
-          *,
-          diagnosis:diagnosis_id (*)
-        `)
+      // Fetch existing billing records for this patient
+      const { data: billingData, error: billingError } = await supabase
+        .from('patient_billing')
+        .select('*')
         .eq('patient_unique_id', patientUniqueId)
-        .order('diagnosed_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
-      if (diagnosisError) {
-        console.log('Patient diagnosis table not available:', diagnosisError.message);
+      if (!billingError && billingData) {
+        setExistingBillingRecords(billingData);
+        
+        // If there are existing billing records, fetch the latest one's details
+        if (billingData.length > 0) {
+          const latestBilling = billingData[0];
+          setBillingId(latestBilling.id);
+          
+          // Fetch diagnoses from billing
+          const { data: savedDiagnoses } = await supabase
+            .from('billing_diagnoses')
+            .select('*')
+            .eq('billing_id', latestBilling.id);
+          
+          if (savedDiagnoses) {
+            const formattedDiagnoses = savedDiagnoses.map(d => ({
+              id: Date.now() + Math.random(), // temporary ID for local state
+              diagnosis: {
+                id: d.diagnosis_id,
+                name: d.diagnosis_name,
+                complication1: '',
+                complication2: '',
+                complication3: '',
+                complication4: ''
+              },
+              status: d.status as 'active' | 'resolved' | 'chronic',
+              diagnosed_date: d.diagnosed_date,
+              notes: d.notes || ''
+            }));
+            setPatientDiagnoses(formattedDiagnoses);
+          }
+          
+          // Fetch surgeries from billing
+          const { data: savedSurgeries } = await supabase
+            .from('billing_surgeries')
+            .select('*')
+            .eq('billing_id', latestBilling.id);
+          
+          if (savedSurgeries) {
+            const formattedSurgeries = savedSurgeries.map(s => ({
+              id: s.surgery_id,
+              name: s.surgery_name,
+              code: s.surgery_code,
+              amount: s.surgery_amount,
+              complication1: s.complication1,
+              complication2: s.complication2
+            }));
+            setSelectedSurgeries(formattedSurgeries);
+          }
+          
+          // Fetch complications from billing
+          const { data: savedComplications } = await supabase
+            .from('billing_complications')
+            .select('*')
+            .eq('billing_id', latestBilling.id);
+          
+          if (savedComplications) {
+            const formattedComplications = savedComplications.map(c => ({
+              id: Date.now() + Math.random(), // temporary ID
+              complication: {
+                id: Date.now() + Math.random(),
+                complication_code: `COMP-${c.id}`,
+                name: c.complication_name,
+                description: '',
+                severity: c.severity as 'mild' | 'moderate' | 'severe' | 'critical' || 'moderate',
+                category: 'Saved',
+                is_active: true
+              },
+              status: c.status as 'active' | 'resolved' | 'monitoring',
+              occurred_date: c.occurred_date,
+              notes: c.notes || ''
+            }));
+            setPatientComplications(formattedComplications);
+          }
+        }
+      } else {
+        console.log('No existing billing records found for patient or billing tables not set up');
+        setExistingBillingRecords([]);
         setPatientDiagnoses([]);
-      } else {
-        setPatientDiagnoses(diagnosisData || []);
-      }
-
-      // Fetch patient complications (with error handling for missing tables)
-      const { data: complicationData, error: complicationError } = await supabase
-        .from('patient_complications')
-        .select(`
-          *,
-          complication:complication_id (*)
-        `)
-        .eq('patient_unique_id', patientUniqueId)
-        .order('occurred_date', { ascending: false });
-
-      if (complicationError) {
-        console.log('Patient complications table not available:', complicationError.message);
+        setSelectedSurgeries([]);
         setPatientComplications([]);
-      } else {
-        setPatientComplications(complicationData || []);
       }
 
     } catch (error) {
-      console.log('Patient tables not yet set up, using empty state');
+      console.log('Billing tables not yet set up, starting with empty state');
+      setExistingBillingRecords([]);
       setPatientDiagnoses([]);
+      setSelectedSurgeries([]);
       setPatientComplications([]);
+    } finally {
+      setIsLoadingPatientData(false);
     }
   };
 
@@ -547,6 +610,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
       if (patientDiagnoses.length > 0) {
         const diagnosesToSave = patientDiagnoses.map(d => ({
           billing_id: billingIdLocal,
+          patient_unique_id: patientUniqueId,
           diagnosis_id: d.diagnosis.id,
           diagnosis_name: d.diagnosis.name,
           status: d.status,
@@ -565,6 +629,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
       if (selectedSurgeries.length > 0) {
         const surgeriesToSave = selectedSurgeries.map(s => ({
           billing_id: billingIdLocal,
+          patient_unique_id: patientUniqueId,
           surgery_id: s.id,
           surgery_name: s.name,
           surgery_code: s.code,
@@ -585,6 +650,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
       if (patientComplications.length > 0) {
         const complicationsToSave = patientComplications.map(c => ({
           billing_id: billingIdLocal,
+          patient_unique_id: patientUniqueId,
           complication_name: c.complication.name,
           severity: c.complication.severity,
           status: c.status,
@@ -618,6 +684,71 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
 
   return (
     <div className="space-y-6">
+      {/* Loading State */}
+      {isLoadingPatientData && (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">Loading patient data...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Existing Billing Records */}
+      {!isLoadingPatientData && existingBillingRecords.length > 0 && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-700">
+              <Receipt className="h-5 w-5" />
+              Patient Billing History
+            </CardTitle>
+            <CardDescription className="text-blue-600">
+              Previously saved billing records for this patient
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {existingBillingRecords.map((record) => (
+                <div key={record.id} className="bg-white p-4 rounded-lg border">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Bill #{record.bill_number}</h4>
+                      <p className="text-sm text-gray-600">Claim ID: {record.claim_id || 'N/A'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-green-600">₹{record.total_amount?.toLocaleString() || '0'}</p>
+                      <Badge className={`${getStatusColor(record.status)} text-xs`}>
+                        {record.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <p><strong>Primary Diagnosis:</strong> {record.primary_diagnosis || 'Not specified'}</p>
+                    <p><strong>Bill Date:</strong> {new Date(record.bill_date).toLocaleDateString()}</p>
+                    {record.date_of_admission && (
+                      <p><strong>Admission:</strong> {new Date(record.date_of_admission).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No Data Message */}
+      {!isLoadingPatientData && existingBillingRecords.length === 0 && patientDiagnoses.length === 0 && selectedSurgeries.length === 0 && patientComplications.length === 0 && (
+        <Card className="border-gray-200 bg-gray-50">
+          <CardContent className="p-6 text-center">
+            <div className="text-gray-500">
+              <Receipt className="h-8 w-8 mx-auto mb-4 opacity-50" />
+              <p className="font-medium">No previous medical records found</p>
+              <p className="text-sm">Start by adding diagnoses, surgeries, or complications below</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Diagnoses Section */}
       <Card>
         <CardHeader>

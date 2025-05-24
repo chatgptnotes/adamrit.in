@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS patient_billing (
 CREATE TABLE IF NOT EXISTS billing_line_items (
     id SERIAL PRIMARY KEY,
     billing_id INTEGER REFERENCES patient_billing(id) ON DELETE CASCADE,
+    patient_unique_id VARCHAR(255) NOT NULL, -- Direct link to patient
     
     -- Item details
     item_type VARCHAR(100), -- 'consultation', 'accommodation', 'pathology', 'medicine', 'other', 'surgical'
@@ -76,6 +77,7 @@ CREATE TABLE IF NOT EXISTS billing_line_items (
 CREATE TABLE IF NOT EXISTS billing_diagnoses (
     id SERIAL PRIMARY KEY,
     billing_id INTEGER REFERENCES patient_billing(id) ON DELETE CASCADE,
+    patient_unique_id VARCHAR(255) NOT NULL, -- Direct link to patient
     diagnosis_id VARCHAR(255), -- UUID from diagnosis table
     diagnosis_name VARCHAR(500) NOT NULL,
     status VARCHAR(50) DEFAULT 'active',
@@ -88,6 +90,7 @@ CREATE TABLE IF NOT EXISTS billing_diagnoses (
 CREATE TABLE IF NOT EXISTS billing_surgeries (
     id SERIAL PRIMARY KEY,
     billing_id INTEGER REFERENCES patient_billing(id) ON DELETE CASCADE,
+    patient_unique_id VARCHAR(255) NOT NULL, -- Direct link to patient
     surgery_id VARCHAR(255), -- UUID from cghs_surgery table
     surgery_name VARCHAR(500) NOT NULL,
     surgery_code VARCHAR(100),
@@ -106,6 +109,7 @@ CREATE TABLE IF NOT EXISTS billing_surgeries (
 CREATE TABLE IF NOT EXISTS billing_complications (
     id SERIAL PRIMARY KEY,
     billing_id INTEGER REFERENCES patient_billing(id) ON DELETE CASCADE,
+    patient_unique_id VARCHAR(255) NOT NULL, -- Direct link to patient
     complication_name VARCHAR(500) NOT NULL,
     severity VARCHAR(50),
     status VARCHAR(50) DEFAULT 'active',
@@ -119,6 +123,7 @@ CREATE TABLE IF NOT EXISTS billing_complications (
 CREATE TABLE IF NOT EXISTS billing_consultations (
     id SERIAL PRIMARY KEY,
     billing_id INTEGER REFERENCES patient_billing(id) ON DELETE CASCADE,
+    patient_unique_id VARCHAR(255) NOT NULL, -- Direct link to patient
     doctor_name VARCHAR(255) NOT NULL,
     specialization VARCHAR(255),
     consultation_date DATE DEFAULT CURRENT_DATE,
@@ -134,10 +139,15 @@ CREATE INDEX IF NOT EXISTS idx_patient_billing_patient_id ON patient_billing(pat
 CREATE INDEX IF NOT EXISTS idx_patient_billing_visit_id ON patient_billing(visit_id);
 CREATE INDEX IF NOT EXISTS idx_patient_billing_bill_number ON patient_billing(bill_number);
 CREATE INDEX IF NOT EXISTS idx_billing_line_items_billing_id ON billing_line_items(billing_id);
+CREATE INDEX IF NOT EXISTS idx_billing_line_items_patient_id ON billing_line_items(patient_unique_id);
 CREATE INDEX IF NOT EXISTS idx_billing_diagnoses_billing_id ON billing_diagnoses(billing_id);
+CREATE INDEX IF NOT EXISTS idx_billing_diagnoses_patient_id ON billing_diagnoses(patient_unique_id);
 CREATE INDEX IF NOT EXISTS idx_billing_surgeries_billing_id ON billing_surgeries(billing_id);
+CREATE INDEX IF NOT EXISTS idx_billing_surgeries_patient_id ON billing_surgeries(patient_unique_id);
 CREATE INDEX IF NOT EXISTS idx_billing_complications_billing_id ON billing_complications(billing_id);
+CREATE INDEX IF NOT EXISTS idx_billing_complications_patient_id ON billing_complications(patient_unique_id);
 CREATE INDEX IF NOT EXISTS idx_billing_consultations_billing_id ON billing_consultations(billing_id);
+CREATE INDEX IF NOT EXISTS idx_billing_consultations_patient_id ON billing_consultations(patient_unique_id);
 
 -- Add some sample data for testing
 INSERT INTO patient_billing (
@@ -185,6 +195,7 @@ INSERT INTO patient_billing (
 -- Add sample billing line items
 INSERT INTO billing_line_items (
     billing_id,
+    patient_unique_id,
     item_type,
     section_title,
     sr_number,
@@ -195,13 +206,13 @@ INSERT INTO billing_line_items (
     amount,
     date_range
 ) VALUES 
-(1, 'consultation', 'Conservative Treatment', '1)', 'Consultation for Inpatients', '2', 350.00, 8, 2800.00, 'Dt.(04/03/2024 TO 09/03/2024)'),
-(1, 'accommodation', 'Conservative Treatment', '2)', 'Accommodation Charges', '', 1500.00, 8, 12000.00, 'Dt.(04/03/2024 TO 09/03/2024)'),
-(1, 'pathology', 'Conservative Treatment', '3)', 'Pathology Charges', '', 3545.00, 1, 3545.00, 'Dt.(04/03/2024 TO 09/03/2024)'),
-(1, 'medicine', 'Conservative Treatment', '4)', 'Medicine Charges', '', 9343.00, 1, 9343.00, 'Dt.(04/03/2024 TO 09/03/2024)'),
-(1, 'other', 'Conservative Treatment', '5)', 'ECG', '590', 175.00, 1, 175.00, ''),
-(1, 'other', 'Conservative Treatment', '5)', 'Chest PA view', '1608', 230.00, 1, 230.00, ''),
-(1, 'surgical', 'Surgical Package', '7)', 'Resection Bladder Neck Endoscopic', '874', 11308.00, 1, 10178.00, 'Dt.(10/03/2024)') 
+(1, '703db825-d73c-4e00-a2b8-9081da6b1f31', 'consultation', 'Conservative Treatment', '1)', 'Consultation for Inpatients', '2', 350.00, 8, 2800.00, 'Dt.(04/03/2024 TO 09/03/2024)'),
+(1, '703db825-d73c-4e00-a2b8-9081da6b1f31', 'accommodation', 'Conservative Treatment', '2)', 'Accommodation Charges', '', 1500.00, 8, 12000.00, 'Dt.(04/03/2024 TO 09/03/2024)'),
+(1, '703db825-d73c-4e00-a2b8-9081da6b1f31', 'pathology', 'Conservative Treatment', '3)', 'Pathology Charges', '', 3545.00, 1, 3545.00, 'Dt.(04/03/2024 TO 09/03/2024)'),
+(1, '703db825-d73c-4e00-a2b8-9081da6b1f31', 'medicine', 'Conservative Treatment', '4)', 'Medicine Charges', '', 9343.00, 1, 9343.00, 'Dt.(04/03/2024 TO 09/03/2024)'),
+(1, '703db825-d73c-4e00-a2b8-9081da6b1f31', 'other', 'Conservative Treatment', '5)', 'ECG', '590', 175.00, 1, 175.00, ''),
+(1, '703db825-d73c-4e00-a2b8-9081da6b1f31', 'other', 'Conservative Treatment', '5)', 'Chest PA view', '1608', 230.00, 1, 230.00, ''),
+(1, '703db825-d73c-4e00-a2b8-9081da6b1f31', 'surgical', 'Surgical Package', '7)', 'Resection Bladder Neck Endoscopic', '874', 11308.00, 1, 10178.00, 'Dt.(10/03/2024)') 
 ON CONFLICT DO NOTHING;
 
 -- Add triggers to update total amount when line items change
