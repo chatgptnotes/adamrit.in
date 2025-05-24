@@ -55,14 +55,12 @@ interface Diagnosis {
 }
 
 interface Package {
-  id: number;
-  surgery_name: string;
-  description: string;
-  cghs_code: string;
-  amount: number;
-  category: string;
-  duration_days: number;
-  is_active: boolean;
+  id: string;
+  name: string;
+  code: string;
+  amount: string;
+  complication1?: string;
+  complication2?: string;
 }
 
 interface Complication {
@@ -203,8 +201,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
       const { data, error } = await supabase
         .from('cghs_surgery')
         .select('*')
-        .eq('is_active', true)
-        .order('surgery_name');
+        .order('name');
       
       if (error) throw error;
       setSurgeries(data || []);
@@ -287,8 +284,8 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
   );
 
   const filteredSurgeries = surgeries.filter(surgery =>
-    surgery.surgery_name.toLowerCase().includes(surgerySearch.toLowerCase()) ||
-    surgery.category.toLowerCase().includes(surgerySearch.toLowerCase())
+    surgery.name.toLowerCase().includes(surgerySearch.toLowerCase()) ||
+    surgery.code.toLowerCase().includes(surgerySearch.toLowerCase())
   );
 
   const filteredComplications = complications.filter(complication =>
@@ -356,7 +353,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
     
     toast({
       title: "Success",
-      description: `Added surgery: ${surgery.surgery_name}`
+      description: `Added surgery: ${surgery.name}`
     });
   };
 
@@ -473,7 +470,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
     });
   };
 
-  const removeSurgery = (id: number) => {
+  const removeSurgery = (id: string) => {
     setSelectedSurgeries(prev => prev.filter(s => s.id !== id));
     toast({
       title: "Success",
@@ -735,9 +732,9 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-sm">{surgery.surgery_name}</div>
+                          <div className="font-medium text-sm">{surgery.name}</div>
                           <div className="text-xs text-gray-500 mt-1">
-                            ₹{surgery.amount?.toLocaleString()} • {surgery.duration_days} days • {surgery.category}
+                            Code: {surgery.code} • ₹{surgery.amount}
                           </div>
                         </div>
                         <Plus className="h-4 w-4 text-green-600" />
@@ -761,18 +758,22 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                 {selectedSurgeries.map((surgery) => (
                   <div key={surgery.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex-1">
-                      <div className="font-medium text-sm">{surgery.surgery_name}</div>
-                      <div className="text-xs text-gray-600 mt-1">{surgery.description}</div>
+                      <div className="font-medium text-sm">{surgery.name}</div>
+                      <div className="text-xs text-gray-600 mt-1">Code: {surgery.code}</div>
                       <div className="flex items-center gap-4 mt-2">
                         <Badge variant="outline" className="bg-white">
-                          ₹{surgery.amount?.toLocaleString()}
+                          ₹{surgery.amount}
                         </Badge>
-                        <Badge variant="outline" className="bg-white">
-                          {surgery.duration_days} days
-                        </Badge>
-                        <Badge variant="outline" className="bg-white">
-                          {surgery.category}
-                        </Badge>
+                        {surgery.complication1 && (
+                          <Badge variant="outline" className="bg-orange-50 border-orange-200 text-orange-700">
+                            {surgery.complication1}
+                          </Badge>
+                        )}
+                        {surgery.complication2 && (
+                          <Badge variant="outline" className="bg-red-50 border-red-200 text-red-700">
+                            {surgery.complication2}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <Button
