@@ -764,16 +764,6 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                         <Badge variant="outline" className="bg-white">
                           ₹{surgery.amount}
                         </Badge>
-                        {surgery.complication1 && (
-                          <Badge variant="outline" className="bg-orange-50 border-orange-200 text-orange-700">
-                            {surgery.complication1}
-                          </Badge>
-                        )}
-                        {surgery.complication2 && (
-                          <Badge variant="outline" className="bg-red-50 border-red-200 text-red-700">
-                            {surgery.complication2}
-                          </Badge>
-                        )}
                       </div>
                     </div>
                     <Button
