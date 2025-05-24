@@ -709,7 +709,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search surgeries by name or category..."
+                placeholder="Search surgeries by name or code..."
                 value={surgerySearch}
                 onChange={(e) => {
                   setSurgerySearch(e.target.value);
