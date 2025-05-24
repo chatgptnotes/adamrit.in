@@ -674,6 +674,8 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
   const [conservativeEnd, setConservativeEnd] = useState('2024-03-09');
   const [surgicalStart, setSurgicalStart] = useState('2024-03-10');
   const [surgicalEnd, setSurgicalEnd] = useState('2024-03-15');
+  const [conservativeStart2, setConservativeStart2] = useState('2024-03-16');
+  const [conservativeEnd2, setConservativeEnd2] = useState('2024-03-21');
 
   // Use patient data from props instead of mock data
   const patientData = {
@@ -1200,10 +1202,10 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
   }, [patient?.unique_id]);
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-900" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       {/* Resizable Secondary Sidebar */}
       <div
-        className={`transition-all relative bg-white border-r shadow-md flex flex-col h-full sticky top-0 z-20 ${isSidebarExpanded ? '' : 'w-12'} min-h-screen`}
+        className={`transition-all relative bg-white/85 backdrop-blur-lg border-r border-blue-100/60 shadow-2xl flex flex-col h-full sticky top-0 z-20 ${isSidebarExpanded ? '' : 'w-12'} min-h-screen`}
         style={{ 
           width: isSidebarExpanded ? `${sidebarWidth}px` : '3rem', 
           minWidth: isSidebarExpanded ? '180px' : '3rem', 
@@ -1218,19 +1220,18 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
             className="absolute top-0 right-0 w-4 h-full cursor-col-resize z-30 flex items-center justify-center"
             onMouseDown={startResizing}
           >
-            <div className="h-16 w-[3px] bg-blue-200 rounded-full opacity-50 hover:opacity-100 transition-opacity" />
+            <div className="h-16 w-[3px] bg-gradient-to-b from-blue-400 to-purple-400 rounded-full opacity-50 hover:opacity-100 transition-all duration-300 hover:shadow-lg" />
           </div>
         )}
         
         {/* Expand button, only show when collapsed */}
         {!isSidebarExpanded && (
           <button
-            className="w-full py-2 border-b text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center"
+            className="w-full py-4 border-b border-blue-100/60 text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 flex items-center justify-center group"
             onClick={() => setIsSidebarExpanded(true)}
-            title="Expand sidebar"
           >
             <span className="sr-only">Expand sidebar</span>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 group-hover:scale-110 transition-transform">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
             </svg>
           </button>
@@ -1239,12 +1240,11 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
         {/* Collapse button, only show when expanded */}
         {isSidebarExpanded && (
           <button
-            className="w-full py-2 border-b text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center"
+            className="w-full py-4 border-b border-blue-100/60 text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 flex items-center justify-center group"
             onClick={() => setIsSidebarExpanded(false)}
-            title="Collapse sidebar"
           >
             <span className="sr-only">Collapse sidebar</span>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 group-hover:scale-110 transition-transform">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
           </button>
@@ -1253,35 +1253,35 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
         <div className="flex-1 flex flex-col gap-0 p-0 m-0">
           {/* Merged Surgeries/Complications Card with Tabs */}
           <div className={isSidebarExpanded ? '' : 'hidden'}>
-            <Card className="shadow-none border-none m-0 p-0 bg-white">
-              <CardHeader className="pb-3 m-0 p-0 px-4 pt-4">
-                <CardTitle className="text-base">Patient Details</CardTitle>
-                <CardDescription>Diagnoses and Complications</CardDescription>
+            <Card className="shadow-xl border border-blue-100/50 m-3 mt-6 bg-white/75 backdrop-blur-md rounded-2xl">
+              <CardHeader className="pb-4 px-6 pt-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-t-2xl">
+                <CardTitle className="text-lg font-semibold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent tracking-tight">Patient Details</CardTitle>
+                <CardDescription className="text-blue-600/70 text-sm mt-1 leading-relaxed">Diagnoses and Complications</CardDescription>
               </CardHeader>
-              <CardContent className="m-0 p-0 px-4 pb-4">
+              <CardContent className="px-6 pb-6">
                 <Tabs defaultValue="diagnoses" className="w-full">
-                  <TabsList className="flex gap-1 mb-0 bg-transparent p-0 rounded-none w-full border-none shadow-none">
+                  <TabsList className="flex gap-1.5 mb-5 bg-blue-50/60 p-1.5 rounded-xl w-full border border-blue-100/50">
                     <TabsTrigger 
                       value="diagnoses" 
-                      className="flex-1 text-center rounded-none px-1 py-2 data-[state=active]:bg-white data-[state=active]:font-bold border-none shadow-none m-0 text-xs"
+                      className="flex-1 text-center rounded-lg px-3 py-2.5 data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:shadow-md data-[state=active]:text-blue-700 text-xs tracking-wide transition-all duration-300"
                     >
                       Diagnoses
                     </TabsTrigger>
                     <TabsTrigger 
                       value="surgeries"
-                      className="flex-1 text-center rounded-none px-1 py-2 data-[state=active]:bg-white data-[state=active]:font-bold border-none shadow-none m-0 text-xs"
+                      className="flex-1 text-center rounded-lg px-3 py-2.5 data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:shadow-md data-[state=active]:text-blue-700 text-xs tracking-wide transition-all duration-300"
                     >
                       Surgeries
                     </TabsTrigger>
                     <TabsTrigger 
                       value="complications"
-                      className="flex-1 text-center rounded-none px-1 py-2 data-[state=active]:bg-white data-[state=active]:font-bold border-none shadow-none m-0 text-xs"
+                      className="flex-1 text-center rounded-lg px-3 py-2.5 data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:shadow-md data-[state=active]:text-blue-700 text-xs tracking-wide transition-all duration-300"
                     >
                       Compl.
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="diagnoses">
-                    <div className="mb-4" ref={searchContainerRef}>
+                    <div className="mb-6" ref={searchContainerRef}>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                           <Search className="h-4 w-4 text-gray-400" />
@@ -1294,37 +1294,38 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                             setIsSearchResultsVisible(true)
                           }}
                           onFocus={() => setIsSearchResultsVisible(true)}
-                          className="pl-10 border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="pl-11 py-3 border-blue-200/60 focus:border-blue-400 focus:ring-2 focus:ring-blue-200/50 bg-white/85 backdrop-blur-sm rounded-xl shadow-sm transition-all duration-300 focus:shadow-md text-sm"
                         />
                       </div>
                       
                       {/* Search Results */}
                       {isSearchResultsVisible && diagnosisSearchTerm && (
-                        <div className="mt-2 border rounded-md max-h-[200px] overflow-y-auto">
+                        <div className="mt-3 border rounded-xl max-h-[200px] overflow-y-auto shadow-lg bg-white/95 backdrop-blur-sm">
                           {filteredDiagnoses.length > 0 ? (
                             <div className="divide-y">
                               {filteredDiagnoses.map((diagnosis) => (
                                 <div 
                                   key={diagnosis.id}
-                                  className="flex items-center justify-between p-3 hover:bg-muted cursor-pointer"
+                                  className="flex items-center justify-between p-4 hover:bg-blue-50/50 cursor-pointer transition-colors"
                                 >
                                   <div>
-                                    <p className="font-medium">{diagnosis.name}</p>
-                                    <p className="text-sm text-muted-foreground">ICD: {diagnosis.icd}</p>
+                                    <p className="font-medium text-gray-800 leading-tight">{diagnosis.name}</p>
+                                    <p className="text-sm text-gray-500 mt-0.5">ICD: {diagnosis.icd}</p>
                                   </div>
                     <Button 
                       size="sm" 
                                     variant="ghost" 
                                     onClick={() => handleAddDiagnosis(diagnosis)}
+                                    className="font-medium"
                     >
-                                    <Plus className="h-4 w-4 mr-1" />
+                                    <Plus className="h-4 w-4 mr-1 text-blue-600" />
                                     Add
                     </Button>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <div className="p-4 text-center text-muted-foreground">
+                            <div className="p-6 text-center text-gray-500 text-sm">
                               No diagnoses found. Try a different search term.
                             </div>
                           )}
@@ -1333,9 +1334,9 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                       
                       {/* Selected Diagnoses Tags */}
                       {diagnoses.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
+                        <div className="flex flex-wrap gap-2.5 mt-4">
                           {diagnoses.map((diagnosis) => (
-                            <div key={diagnosis.id} className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm">
+                            <div key={diagnosis.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100/80 text-blue-700 text-sm font-medium">
                               {diagnosis.name}
                               <button 
                                 onClick={() => handleRemoveDiagnosis(diagnosis.id)}
@@ -1372,19 +1373,19 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                             setIsSurgerySearchResultsVisible(true)
                           }}
                           onFocus={() => setIsSurgerySearchResultsVisible(true)}
-                          className="pl-10 border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="pl-11 py-3 border-blue-200/60 focus:border-blue-400 focus:ring-2 focus:ring-blue-200/50 bg-white/85 backdrop-blur-sm rounded-xl shadow-sm transition-all duration-300 focus:shadow-md text-sm"
                         />
                       </div>
                       
                       {/* Surgery Search Results */}
                       {isSurgerySearchResultsVisible && surgerySearchTerm && (
-                        <div className="mt-2 border rounded-md max-h-[300px] overflow-y-auto">
+                        <div className="mt-3 border rounded-xl max-h-[300px] overflow-y-auto shadow-lg bg-white/95 backdrop-blur-sm">
                           {filteredSurgeries.length > 0 ? (
                             <div className="divide-y">
                               {filteredSurgeries.map((surgery) => (
                                 <div 
                                   key={surgery.id}
-                                  className="flex items-center justify-between p-3 hover:bg-muted cursor-pointer"
+                                  className="flex items-center justify-between p-4 hover:bg-blue-50/50 cursor-pointer transition-colors"
                                 >
                                   <div className="flex-grow">
                                     <p className="font-medium">{surgery.name}</p>
@@ -1418,7 +1419,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                               ))}
                             </div>
                           ) : (
-                            <div className="p-4 text-center text-muted-foreground">
+                            <div className="p-6 text-center text-gray-500 text-sm">
                               No surgeries found. Try a different search term.
                       </div>
                     )}
@@ -1507,14 +1508,14 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                       {/* Add Surgery Button */}
                       <div className="mt-4">
                         <Button 
-                          variant="outline" 
-                          className="w-full"
+                          variant="outline"
+                          className="w-full bg-white/80 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border-blue-200 hover:border-blue-300 transition-all duration-300 hover:shadow-md rounded-xl"
                           onClick={() => {
                             setTemporarySelectedSurgeries([]);
                             setShowSurgerySelectionDialog(true);
                           }}
                         >
-                          <PlusCircle className="mr-2 h-4 w-4" />
+                          <PlusCircle className="mr-2 h-4 w-4 text-blue-600" />
                           Add Surgery
                         </Button>
                       </div>
@@ -1556,21 +1557,21 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
       {/* Main Content */}
       <div className="flex-1">
         {/* Patient Information Card at the very top, always visible and aligned to the right of the sidebar */}
-        <div className="p-4" style={{ minWidth: 0 }}>
-          <Card className="border-blue-100 transition-all duration-300 shadow-md bg-white/95 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-4">
+        <div className="p-6" style={{ minWidth: 0 }}>
+          <Card className="border-blue-200/40 transition-all duration-300 shadow-2xl bg-white/95 backdrop-blur-lg rounded-3xl overflow-hidden">
+            <CardHeader className="pb-6 px-8 pt-8 bg-gradient-to-r from-blue-50/60 via-indigo-50/60 to-purple-50/60 border-b border-blue-100/40">
+              <div className="flex justify-between items-start gap-6">
+                <div className="flex items-center gap-6">
                   {/* Avatar with upload */}
                   <div className="relative group">
                     <Avatar
-                      className={`transition-all duration-300 border-2 border-blue-100 h-16 w-16 cursor-pointer`}
+                      className={`transition-all duration-300 border-4 border-white shadow-xl h-24 w-24 cursor-pointer group-hover:scale-105 group-hover:shadow-2xl`}
                       onClick={() => fileInputRef.current?.click()}
                     >
                       {patientImage ? (
                         <AvatarImage src={patientImage} alt={patientData.name} />
                       ) : (
-                        <AvatarFallback className="bg-blue-50 text-blue-700 text-xl font-semibold">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-100 to-indigo-200 text-blue-700 text-2xl font-bold">
                           {patientData.name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       )}
@@ -1582,12 +1583,12 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                       style={{ display: 'none' }}
                       onChange={handleImageChange}
                     />
-                    <span className="absolute bottom-0 right-0 bg-blue-500 text-white text-xs rounded-full px-1 opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
+                    <span className="absolute -bottom-1 -right-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-medium rounded-full px-2.5 py-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg">Edit</span>
                   </div>
                   <div>
-                    <h2 className="font-bold text-2xl">{patientData.name}</h2>
-                    <div className="flex items-center gap-4 mt-1">
-                      <Badge variant="outline" className="px-2 py-1 bg-blue-50 text-blue-700 border-blue-200">
+                    <h2 className="font-bold text-4xl bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent tracking-tight leading-tight">{patientData.name}</h2>
+                    <div className="flex items-center gap-4 mt-3">
+                      <Badge variant="outline" className="px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-blue-200/60 shadow-sm font-medium tracking-wide">
                         ID: {patientData.unique_id} , {patientData.age} years, {patientData.gender}
                       </Badge>
                       {/* <span className="text-sm text-muted-foreground">
@@ -1596,55 +1597,55 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                     </div>
                   </div>
                 </div>
-                <Badge className={patientData.insuranceStatus === "Active" ? "bg-green-500" : "bg-amber-500"}>
+                <Badge className={patientData.insuranceStatus === "Active" ? "bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg px-4 py-2 font-semibold tracking-wide" : "bg-gradient-to-r from-amber-500 to-orange-600 shadow-lg px-4 py-2 font-semibold tracking-wide"}>
                   {patientData.insuranceStatus}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="py-2">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center">
-                  <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">{patientData.phone}</span>
+            <CardContent className="py-6 px-8 bg-white/60">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="flex items-center p-4 rounded-2xl bg-white/70 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 border border-blue-50">
+                  <Phone className="h-5 w-5 mr-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700 tracking-wide">{patientData.phone}</span>
                 </div>
-                <div className="flex items-center">
-                  <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">Last Visit: {patientData.lastVisit}</span>
+                <div className="flex items-center p-4 rounded-2xl bg-white/70 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 border border-blue-50">
+                  <CalendarDays className="h-5 w-5 mr-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700 tracking-wide">Last Visit: {patientData.lastVisit}</span>
                 </div>
-                <div className="flex items-center">
-                  <UserRound className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-sm">Registered: {patientData.registrationDate}</span>
+                <div className="flex items-center p-4 rounded-2xl bg-white/70 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 border border-blue-50">
+                  <UserRound className="h-5 w-5 mr-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700 tracking-wide">Registered: {patientData.registrationDate}</span>
                 </div>
-                <div className="flex items-center">
-                  <CalendarDays className="h-4 w-4 mr-2 text-green-600" />
-                  <span className="text-sm">Admission: {patientData.dateOfAdmission}</span>
+                <div className="flex items-center p-4 rounded-2xl bg-white/70 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 border border-blue-50">
+                  <CalendarDays className="h-5 w-5 mr-4 text-green-600" />
+                  <span className="text-sm font-medium text-gray-700 tracking-wide">Admission: {patientData.dateOfAdmission}</span>
                 </div>
-                <div className="flex items-center">
-                  <CalendarDays className="h-4 w-4 mr-2 text-red-600" />
-                  <span className="text-sm">Discharge: {patientData.dateOfDischarge}</span>
+                <div className="flex items-center p-4 rounded-2xl bg-white/70 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300 border border-blue-50">
+                  <CalendarDays className="h-5 w-5 mr-4 text-red-600" />
+                  <span className="text-sm font-medium text-gray-700 tracking-wide">Discharge: {patientData.dateOfDischarge}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
         
-        <div className="px-4 grid gap-6 md:grid-cols-12">
+        <div className="px-6 grid gap-8 md:grid-cols-12">
           {/* Investigations, Medications, and Action Buttons */}
-          <div className="md:col-span-4 space-y-6">
+          <div className="md:col-span-4 space-y-8">
             {/* Investigations Section with Tabs */}
-            <Card>
-              <CardHeader className="pb-3">
+            <Card className="shadow-2xl bg-white/95 backdrop-blur-lg rounded-3xl border border-blue-100/40 overflow-hidden">
+              <CardHeader className="pb-4 px-6 pt-6 bg-gradient-to-r from-blue-50/60 to-indigo-50/60 border-b border-blue-100/30">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base">Investigations</CardTitle>
-                    <CardDescription>All investigations and reports</CardDescription>
+                    <CardTitle className="text-xl font-semibold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent tracking-tight">Investigations</CardTitle>
+                    <CardDescription className="text-blue-600/70 text-sm mt-1 leading-relaxed">All investigations and reports</CardDescription>
                   </div>
                   {/* Investigation Tabs */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2.5">
                     {['all', 'radiology', 'lab', 'other'].map(tab => (
                       <button
                         key={tab}
-                        className={`px-3 py-1 rounded-full text-sm font-semibold transition-colors border ${selectedInvTab === tab ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'}`}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 border shadow-sm ${selectedInvTab === tab ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg scale-105' : 'bg-white/90 text-blue-600 border-blue-200/60 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-md hover:scale-105'}`}
                         onClick={() => setSelectedInvTab(tab)}
                       >
                         {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -1653,14 +1654,14 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="bg-white/60 px-6 py-5">
                 {/* Day Tabs (D1-D4) for all except 'all' tab */}
                 {selectedInvTab !== 'all' && (
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-2.5 mb-6">
                     {['D1', 'D2', 'D3', 'D4'].map(day => (
                       <button
                         key={day}
-                        className={`px-3 py-1 rounded-full text-sm font-semibold transition-colors border ${selectedInvDay === day ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'}`}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 border shadow-sm ${selectedInvDay === day ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg' : 'bg-white/90 text-blue-600 border-blue-200/60 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-md'}`}
                         onClick={() => setSelectedInvDay(day)}
                       >
                         {day}
@@ -1697,19 +1698,19 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
               </CardContent>
             </Card>
             {/* Medications Section with Day Tabs */}
-            <Card>
-              <CardHeader className="pb-3">
+            <Card className="shadow-2xl bg-white/95 backdrop-blur-lg rounded-3xl border border-blue-100/40 overflow-hidden">
+              <CardHeader className="pb-4 px-6 pt-6 bg-gradient-to-r from-blue-50/60 to-indigo-50/60 border-b border-blue-100/30">
                     <div className="flex items-center justify-between">
                       <div>
-                <CardTitle className="text-base">Medications</CardTitle>
-                <CardDescription>To be given</CardDescription>
+                <CardTitle className="text-xl font-semibold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent tracking-tight">Medications</CardTitle>
+                <CardDescription className="text-blue-600/70 text-sm mt-1 leading-relaxed">To be given</CardDescription>
                       </div>
                       {/* Day Tabs */}
-                      <div className="flex gap-2">
+                      <div className="flex gap-2.5">
                         {['D1', 'D2', 'D3', 'D4'].map(day => (
                           <button
                             key={day}
-                            className={`px-3 py-1 rounded-full text-sm font-semibold transition-colors border ${selectedMedDay === day ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'}`}
+                            className={`px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 border shadow-sm ${selectedMedDay === day ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg' : 'bg-white/90 text-blue-600 border-blue-200/60 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-md'}`}
                             onClick={() => setSelectedMedDay(day)}
                           >
                             {day}
@@ -1718,45 +1719,53 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                       </div>
                     </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="bg-white/60 px-6 py-5">
                       <MedicationsList 
                   complicationIds={[basicComplicationId]}
                         day={selectedMedDay}
                       />
               </CardContent>
             </Card>
-            <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleGenerateInvoice}>
+            <div className="flex justify-end gap-4 pt-2">
+                <Button variant="outline" onClick={handleGenerateInvoice} className="bg-white/90 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border-blue-200/60 hover:border-blue-300 transition-all duration-300 hover:shadow-md rounded-xl font-medium px-6 py-3">
                   <Receipt className="mr-2 h-4 w-4" />
                   Generate Invoice
                 </Button>
-                <Button variant="outline" onClick={handleGenerateCaseSheet}>
-                <FileText className="mr-2 h-4 w-4" />
-                Generate Case Sheet
-              </Button>
-                <Button onClick={handleSaveChanges} disabled={!hasUnsavedChanges}>
+                <Button variant="outline" onClick={handleGenerateCaseSheet} className="bg-white/90 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border-blue-200/60 hover:border-blue-300 transition-all duration-300 hover:shadow-md rounded-xl font-medium px-6 py-3">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Generate Case Sheet
+                </Button>
+                <Button onClick={handleSaveChanges} disabled={!hasUnsavedChanges} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl font-semibold px-6 py-3 tracking-wide">
                   Save Changes
                 </Button>
             </div>
           </div>
           {/* Invoice Page to the right */}
-          <div className="md:col-span-8">
-            <div className="flex flex-col md:flex-row gap-4 mb-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1">Conservative Treatment Start</label>
-                <input type="date" value={conservativeStart} onChange={e => setConservativeStart(e.target.value)} className="border rounded px-2 py-1" />
+          <div className="md:col-span-8 space-y-6">
+            <div className="flex flex-col md:flex-row gap-2 mb-3 p-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-blue-100/50">
+              <div className="flex-1">
+                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Conservative Start</label>
+                <input type="date" value={conservativeStart} onChange={e => setConservativeStart(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
               </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">Conservative Treatment End</label>
-                <input type="date" value={conservativeEnd} onChange={e => setConservativeEnd(e.target.value)} className="border rounded px-2 py-1" />
+              <div className="flex-1">
+                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Conservative End</label>
+                <input type="date" value={conservativeEnd} onChange={e => setConservativeEnd(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
               </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">Surgical Package Start</label>
-                <input type="date" value={surgicalStart} onChange={e => setSurgicalStart(e.target.value)} className="border rounded px-2 py-1" />
+              <div className="flex-1">
+                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Surgical Start</label>
+                <input type="date" value={surgicalStart} onChange={e => setSurgicalStart(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
               </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1">Surgical Package End</label>
-                <input type="date" value={surgicalEnd} onChange={e => setSurgicalEnd(e.target.value)} className="border rounded px-2 py-1" />
+              <div className="flex-1">
+                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Surgical End</label>
+                <input type="date" value={surgicalEnd} onChange={e => setSurgicalEnd(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Conservative Start</label>
+                <input type="date" value={conservativeStart2} onChange={e => setConservativeStart2(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Conservative End</label>
+                <input type="date" value={conservativeEnd2} onChange={e => setConservativeEnd2(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
               </div>
             </div>
             <InvoicePage 
@@ -1898,8 +1907,12 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
               <Input
                 placeholder="Search by surgery name, CGHS code, or category..."
                 value={surgerySearchTerm}
-                onChange={(e) => setSurgerySearchTerm(e.target.value)}
-                className="pl-10 border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                onChange={(e) => {
+                  setSurgerySearchTerm(e.target.value)
+                  setIsSurgerySearchResultsVisible(true)
+                }}
+                onFocus={() => setIsSurgerySearchResultsVisible(true)}
+                className="pl-11 py-3 border-blue-200/60 focus:border-blue-400 focus:ring-2 focus:ring-blue-200/50 bg-white/85 backdrop-blur-sm rounded-xl shadow-sm transition-all duration-300 focus:shadow-md text-sm"
               />
             </div>
             
@@ -1909,7 +1922,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                   {filteredSurgeries.map((surgery) => (
                     <div 
                       key={surgery.id}
-                      className="flex items-center p-3 hover:bg-muted cursor-pointer"
+                      className="flex items-center p-4 hover:bg-blue-50/50 cursor-pointer transition-colors"
                       onClick={() => toggleSurgerySelection(surgery.id)}
                     >
                       <div className="flex items-center h-5">
@@ -1938,7 +1951,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                   ))}
                 </div>
               ) : (
-                <div className="p-4 text-center text-muted-foreground">
+                <div className="p-6 text-center text-gray-500 text-sm">
                   No surgeries found. Try a different search term.
                 </div>
               )}
