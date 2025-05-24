@@ -630,7 +630,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
             
             {/* Search Results */}
             {showDiagnosisResults && diagnosisSearch && (
-              <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                 {filteredDiagnoses.length > 0 ? (
                   filteredDiagnoses.map((diagnosis) => (
                     <div
@@ -662,7 +662,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
           {patientDiagnoses.length > 0 && (
             <div>
               <Label className="text-sm font-medium mb-2 block">Selected Diagnoses</Label>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {patientDiagnoses.map((item) => (
                   <div key={item.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex-1">
@@ -725,7 +725,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
             
             {/* Surgery Search Results */}
             {showSurgeryResults && surgerySearch && (
-              <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                 {filteredSurgeries.length > 0 ? (
                   filteredSurgeries.map((surgery) => (
                     <div
@@ -757,7 +757,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
           {selectedSurgeries.length > 0 && (
             <div>
               <Label className="text-sm font-medium mb-2 block">Selected Surgeries</Label>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {selectedSurgeries.map((surgery) => (
                   <div key={surgery.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex-1">
@@ -807,7 +807,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
           {relatedComplications.length > 0 && (
             <div>
               <Label className="text-sm font-medium mb-2 block">Related Complications (Based on Diagnoses)</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2">
                 {relatedComplications.map((complication) => (
                   <div
                     key={complication.id}
@@ -884,7 +884,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
           {patientComplications.length > 0 && (
             <div>
               <Label className="text-sm font-medium mb-2 block">Active Complications</Label>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                 {patientComplications.map((item) => (
                   <div key={item.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
                     <div className="flex-1">
