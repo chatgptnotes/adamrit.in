@@ -648,19 +648,19 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                 <div key={record.id} className="bg-white p-4 rounded-lg border">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h4 className="font-medium text-gray-900">Bill #{record.bill_number}</h4>
-                      <p className="text-sm text-gray-600">Claim ID: {record.claim_id || 'N/A'}</p>
+                      <h4 className="font-medium text-gray-900">Bill #{String(record.bill_number || '')}</h4>
+                      <p className="text-sm text-gray-600">Claim ID: {String(record.claim_id || 'N/A')}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-green-600">₹{record.total_amount?.toLocaleString() || '0'}</p>
-                      <Badge className={`${getStatusColor(record.status)} text-xs`}>
-                        {record.status}
+                      <p className="font-medium text-green-600">₹{String(record.total_amount || '0')}</p>
+                      <Badge className={`${getStatusColor(String(record.status || 'draft'))} text-xs`}>
+                        {String(record.status || 'draft')}
                       </Badge>
                     </div>
                   </div>
                   <div className="text-sm text-gray-600">
-                    <p><strong>Primary Diagnosis:</strong> {record.primary_diagnosis || 'Not specified'}</p>
-                    <p><strong>Bill Date:</strong> {new Date(record.bill_date).toLocaleDateString()}</p>
+                    <p><strong>Primary Diagnosis:</strong> {String(record.primary_diagnosis || 'Not specified')}</p>
+                    <p><strong>Bill Date:</strong> {new Date(record.bill_date || new Date()).toLocaleDateString()}</p>
                     {record.date_of_admission && (
                       <p><strong>Admission:</strong> {new Date(record.date_of_admission).toLocaleDateString()}</p>
                     )}
@@ -797,9 +797,14 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-sm">{diagnosis.name}</div>
+                          <div className="font-medium text-sm">{String(diagnosis.name || '')}</div>
                           <div className="text-xs text-gray-500 mt-1">
-                            Complications: {[diagnosis.complication1, diagnosis.complication2, diagnosis.complication3, diagnosis.complication4].filter(Boolean).join(', ') || 'None'}
+                            Complications: {[
+                              String(diagnosis.complication1 || ''), 
+                              String(diagnosis.complication2 || ''), 
+                              String(diagnosis.complication3 || ''), 
+                              String(diagnosis.complication4 || '')
+                            ].filter(Boolean).join(', ') || 'None'}
                           </div>
                         </div>
                         <Plus className="h-4 w-4 text-green-600" />
@@ -823,16 +828,16 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                 {patientDiagnoses.map((item) => (
                   <div key={item.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex-1">
-                      <div className="font-medium text-sm">{item.diagnosis.name}</div>
+                      <div className="font-medium text-sm">{String(item.diagnosis?.name || '')}</div>
                       <div className="text-xs text-gray-600 mt-1">
                         Related complications available
                       </div>
                       <div className="flex items-center gap-2 mt-2">
-                        <Badge className={getStatusColor(item.status)}>
-                          {item.status}
+                        <Badge className={getStatusColor(String(item.status || 'active'))}>
+                          {String(item.status || 'active')}
                         </Badge>
                         <span className="text-xs text-gray-500">
-                          Diagnosed: {new Date(item.diagnosed_date).toLocaleDateString()}
+                          Diagnosed: {new Date(item.diagnosed_date || new Date()).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -892,9 +897,9 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-sm">{surgery.name}</div>
+                          <div className="font-medium text-sm">{String(surgery.name || '')}</div>
                           <div className="text-xs text-gray-500 mt-1">
-                            Code: {surgery.code} • ₹{surgery.amount}
+                            Code: {String(surgery.code || '')} • ₹{String(surgery.amount || '')}
                           </div>
                         </div>
                         <Plus className="h-4 w-4 text-green-600" />
@@ -918,11 +923,11 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                 {selectedSurgeries.map((surgery) => (
                   <div key={surgery.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex-1">
-                      <div className="font-medium text-sm">{surgery.name}</div>
-                      <div className="text-xs text-gray-600 mt-1">Code: {surgery.code}</div>
+                      <div className="font-medium text-sm">{String(surgery.name || '')}</div>
+                      <div className="text-xs text-gray-600 mt-1">Code: {String(surgery.code || '')}</div>
                       <div className="flex items-center gap-4 mt-2">
                         <Badge variant="outline" className="bg-white">
-                          ₹{surgery.amount}
+                          ₹{String(surgery.amount || '')}
                         </Badge>
                       </div>
                     </div>
@@ -967,9 +972,9 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-sm font-medium">{complication.name}</div>
-                        <Badge className={`${getSeverityColor(complication.severity)} text-xs`}>
-                          {complication.severity}
+                        <div className="text-sm font-medium">{String(complication.name || '')}</div>
+                        <Badge className={`${getSeverityColor(String(complication.severity || 'moderate'))} text-xs`}>
+                          {String(complication.severity || 'moderate')}
                         </Badge>
                       </div>
                       <Plus className="h-4 w-4 text-orange-600" />
@@ -1008,13 +1013,13 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-sm">{complication.name}</div>
+                          <div className="font-medium text-sm">{String(complication.name || '')}</div>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge className={`${getSeverityColor(complication.severity)} text-xs`}>
-                              {complication.severity}
+                            <Badge className={`${getSeverityColor(String(complication.severity || 'moderate'))} text-xs`}>
+                              {String(complication.severity || 'moderate')}
                             </Badge>
                             <span className="text-xs text-gray-500">
-                              {complication.category}
+                              {String(complication.category || '')}
                             </span>
                           </div>
                         </div>
@@ -1039,17 +1044,17 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                 {patientComplications.map((item) => (
                   <div key={item.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
                     <div className="flex-1">
-                      <div className="font-medium text-sm">{item.complication.name}</div>
-                      <div className="text-xs text-gray-600 mt-1">{item.complication.description}</div>
+                      <div className="font-medium text-sm">{String(item.complication?.name || '')}</div>
+                      <div className="text-xs text-gray-600 mt-1">{String(item.complication?.description || '')}</div>
                       <div className="flex items-center gap-2 mt-2">
-                        <Badge className={getSeverityColor(item.complication.severity)}>
-                          {item.complication.severity}
+                        <Badge className={getSeverityColor(String(item.complication?.severity || 'moderate'))}>
+                          {String(item.complication?.severity || 'moderate')}
                         </Badge>
-                        <Badge className={getStatusColor(item.status)}>
-                          {item.status}
+                        <Badge className={getStatusColor(String(item.status || 'active'))}>
+                          {String(item.status || 'active')}
                         </Badge>
                         <span className="text-xs text-gray-500">
-                          Occurred: {new Date(item.occurred_date).toLocaleDateString()}
+                          Occurred: {new Date(item.occurred_date || new Date()).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
