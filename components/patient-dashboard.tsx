@@ -292,6 +292,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
         if (doctorsError) {
           console.error("Error fetching doctors:", doctorsError);
         } else {
+          console.log("✅ Successfully fetched doctors:", doctorsData);
           setDoctors(doctorsData || []);
         }
 
