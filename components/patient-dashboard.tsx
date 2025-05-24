@@ -37,7 +37,8 @@ import {
   Plus,
   XCircle,
   Scissors,
-  ClipboardList
+  ClipboardList,
+  Trash2
 } from "lucide-react"
 import {
   Dialog,
@@ -664,6 +665,25 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
     });
   };
 
+  // Handler to delete main items
+  const handleDeleteMainItem = (itemIdx: number) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.filter((_, idx) => idx !== itemIdx);
+    });
+  };
+
+  // Handler to delete sub items
+  const handleDeleteSubItem = (itemIdx: number, subIdx: number) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main" || !item.subItems) return item;
+        
+        const newSubItems = item.subItems.filter((_: any, sIdx: number) => sIdx !== subIdx);
+        return { ...item, subItems: newSubItems };
+      });
+    });
+  };
+
   // Handler to update CGHS adjustment for surgical items
   const handleCGHSAdjustmentChange = (itemIdx: number, subIdx: number, adjustmentType: string, adjustmentValue: string) => {
     setInvoiceItems((prevItems: any[]) => {
@@ -802,11 +822,12 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
         <thead>
           <tr>
             <th style={{ width: '8%' }}>SR.NO</th>
-            <th style={{ width: '45%' }}>ITEM</th>
+            <th style={{ width: '40%' }}>ITEM</th>
             <th style={{ width: '12%' }}>CGHS NABH CODE No.</th>
             <th style={{ width: '12%' }}>CGHS NABH RATE</th>
             <th style={{ width: '8%' }}>QTY</th>
-            <th style={{ width: '15%' }}>AMOUNT</th>
+            <th style={{ width: '12%' }}>AMOUNT</th>
+            <th style={{ width: '8%' }}>ACTIONS</th>
           </tr>
         </thead>
         <tbody>
@@ -814,7 +835,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
             if (item.type === "section") {
               return (
                 <tr key={idx} className="invoice-section">
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <strong>{item.title}</strong>
                     {item.dateRange && <br />}
                     {item.dateRange}
@@ -834,7 +855,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                   <React.Fragment key={idx}>
                     <tr style={{ backgroundColor: '#f0f0f0' }}>
                       <td><strong>{item.sr}</strong></td>
-                      <td colSpan={4}><strong>{item.item}</strong></td>
+                      <td colSpan={3}><strong>{item.item}</strong></td>
                       <td>
                         <button
                           onClick={() => handleAddRow(idx, sectionType)}
@@ -842,6 +863,17 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                           style={{ fontSize: '10px' }}
                         >
                           + Add Row
+                        </button>
+                      </td>
+                      <td></td>
+                      <td>
+                        <button
+                          onClick={() => handleDeleteMainItem(idx)}
+                          className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors flex items-center justify-center"
+                          style={{ fontSize: '10px' }}
+                          title="Delete section"
+                        >
+                          <Trash2 className="h-3 w-3" />
                         </button>
                       </td>
                     </tr>
@@ -979,6 +1011,16 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                         <td className="right-align">
                           <strong>{(sub.pricing ? sub.pricing.finalAmount : sub.amount)?.toFixed(2)}</strong>
                         </td>
+                        <td className="center-align">
+                          <button
+                            onClick={() => handleDeleteSubItem(idx, subIdx)}
+                            className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
+                            style={{ fontSize: '10px' }}
+                            title="Delete row"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </React.Fragment>
@@ -1020,6 +1062,16 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                       />
                     </td>
                     <td className="right-align"><strong>{item.amount?.toFixed(2) || ''}</strong></td>
+                    <td className="center-align">
+                      <button
+                        onClick={() => handleDeleteMainItem(idx)}
+                        className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
+                        style={{ fontSize: '10px' }}
+                        title="Delete item"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </td>
                   </tr>
                 );
               }
@@ -1032,6 +1084,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
           <tr style={{ backgroundColor: '#f0f0f0', fontWeight: 'bold', fontSize: '14px' }}>
             <td colSpan={5} className="center-align"><strong>TOTAL BILL AMOUNT</strong></td>
             <td className="right-align"><strong>{calculateTotal().toFixed(2)}</strong></td>
+            <td></td>
           </tr>
         </tbody>
       </table>
