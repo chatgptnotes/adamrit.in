@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
+import { DiagnosisManager } from "./DiagnosisManager"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { 
@@ -1992,7 +1993,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                       value="diagnoses" 
                       className="flex-1 text-center rounded-lg px-3 py-2.5 data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:shadow-md data-[state=active]:text-blue-700 text-xs tracking-wide transition-all duration-300"
                     >
-                      Diagnoses
+                      Clinical Mgmt
                     </TabsTrigger>
                     <TabsTrigger 
                       value="surgeries"
@@ -2008,80 +2009,9 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="diagnoses">
-                    <div className="mb-6" ref={searchContainerRef}>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                          <Search className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <Input
-                          placeholder="Search by diagnosis name or ICD code..."
-                          value={diagnosisSearchTerm}
-                          onChange={(e) => {
-                            setDiagnosisSearchTerm(e.target.value)
-                            setIsSearchResultsVisible(true)
-                          }}
-                          onFocus={() => setIsSearchResultsVisible(true)}
-                          className="pl-11 py-3 border-blue-200/60 focus:border-blue-400 focus:ring-2 focus:ring-blue-200/50 bg-white/85 backdrop-blur-sm rounded-xl shadow-sm transition-all duration-300 focus:shadow-md text-sm"
-                        />
-                      </div>
-                      
-                      {/* Search Results */}
-                      {isSearchResultsVisible && diagnosisSearchTerm && (
-                        <div className="mt-3 border rounded-xl max-h-[200px] overflow-y-auto shadow-lg bg-white/95 backdrop-blur-sm">
-                          {filteredDiagnoses.length > 0 ? (
-                            <div className="divide-y">
-                              {filteredDiagnoses.map((diagnosis) => (
-                                <div 
-                                  key={diagnosis.id}
-                                  className="flex items-center justify-between p-4 hover:bg-blue-50/50 cursor-pointer transition-colors"
-                                >
-                                  <div>
-                                    <p className="font-medium text-gray-800 leading-tight">{diagnosis.name}</p>
-                                    <p className="text-sm text-gray-500 mt-0.5">ICD: {diagnosis.icd}</p>
-                                  </div>
-                    <Button 
-                      size="sm" 
-                                    variant="ghost" 
-                                    onClick={() => handleAddDiagnosis(diagnosis)}
-                                    className="font-medium"
-                    >
-                                    <Plus className="h-4 w-4 mr-1 text-blue-600" />
-                                    Add
-                    </Button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="p-6 text-center text-gray-500 text-sm">
-                              No diagnoses found. Try a different search term.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Selected Diagnoses Tags */}
-                      {diagnoses.length > 0 && (
-                        <div className="flex flex-wrap gap-2.5 mt-4">
-                          {diagnoses.map((diagnosis) => (
-                            <div key={diagnosis.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-100/80 text-blue-700 text-sm font-medium">
-                              {diagnosis.name}
-                              <button 
-                                onClick={() => handleRemoveDiagnosis(diagnosis.id)}
-                                className="ml-1 text-blue-500 hover:text-blue-700"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <DiagnosisList 
-                      onSelect={setSelectedDiagnosis} 
-                      selected={selectedDiagnosis}
-                      diagnoses={diagnoses}
-                      onDelete={handleRemoveDiagnosis}
+                    <DiagnosisManager 
+                      patientUniqueId={patient?.unique_id || ''} 
+                      visitId={visits[0]?.visit_id || undefined}
                     />
                   </TabsContent>
                   
