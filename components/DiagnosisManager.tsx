@@ -39,7 +39,9 @@ import {
   Activity,
   CheckCircle2,
   Clock,
-  Eye
+  Eye,
+  Save,
+  Receipt
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -118,6 +120,10 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
   const [showAddDiagnosisDialog, setShowAddDiagnosisDialog] = useState(false);
   const [showAddSurgeryDialog, setShowAddSurgeryDialog] = useState(false);
   const [showAddComplicationDialog, setShowAddComplicationDialog] = useState(false);
+  
+  // Billing state
+  const [billingId, setBillingId] = useState<number | null>(null);
+  const [isSavingToBilling, setIsSavingToBilling] = useState(false);
   
   // Form states
   const [newDiagnosis, setNewDiagnosis] = useState({
@@ -523,6 +529,106 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
     }
   };
 
+  // Billing functions
+  const saveToBilling = async () => {
+    setIsSavingToBilling(true);
+    try {
+      // Generate a unique bill number
+      const billNumber = `BL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Date.now()}`;
+      
+      // Create the main billing record
+      const { data: billingData, error: billingError } = await supabase
+        .from('patient_billing')
+        .insert({
+          patient_unique_id: patientUniqueId,
+          visit_id: visitId || `VISIT-${Date.now()}`,
+          bill_number: billNumber,
+          patient_name: 'Patient Name', // You can get this from patient data
+          bill_date: new Date().toISOString().split('T')[0],
+          status: 'draft',
+          primary_diagnosis: patientDiagnoses.map(d => d.diagnosis.name).join(', ')
+        })
+        .select()
+        .single();
+
+      if (billingError) throw billingError;
+      
+      const billingIdLocal = billingData.id;
+      setBillingId(billingIdLocal);
+
+      // Save selected diagnoses to billing
+      if (patientDiagnoses.length > 0) {
+        const diagnosesToSave = patientDiagnoses.map(d => ({
+          billing_id: billingIdLocal,
+          diagnosis_id: d.diagnosis.id,
+          diagnosis_name: d.diagnosis.name,
+          status: d.status,
+          diagnosed_date: d.diagnosed_date,
+          notes: d.notes || ''
+        }));
+
+        const { error: diagnosisError } = await supabase
+          .from('billing_diagnoses')
+          .insert(diagnosesToSave);
+
+        if (diagnosisError) throw diagnosisError;
+      }
+
+      // Save selected surgeries to billing
+      if (selectedSurgeries.length > 0) {
+        const surgeriesToSave = selectedSurgeries.map(s => ({
+          billing_id: billingIdLocal,
+          surgery_id: s.id,
+          surgery_name: s.name,
+          surgery_code: s.code,
+          surgery_amount: s.amount,
+          complication1: s.complication1 || '',
+          complication2: s.complication2 || '',
+          surgery_date: new Date().toISOString().split('T')[0]
+        }));
+
+        const { error: surgeryError } = await supabase
+          .from('billing_surgeries')
+          .insert(surgeriesToSave);
+
+        if (surgeryError) throw surgeryError;
+      }
+
+      // Save complications to billing
+      if (patientComplications.length > 0) {
+        const complicationsToSave = patientComplications.map(c => ({
+          billing_id: billingIdLocal,
+          complication_name: c.complication.name,
+          severity: c.complication.severity,
+          status: c.status,
+          occurred_date: c.occurred_date
+        }));
+
+        const { error: complicationError } = await supabase
+          .from('billing_complications')
+          .insert(complicationsToSave);
+
+        if (complicationError) throw complicationError;
+      }
+
+      toast({
+        title: "Success!",
+        description: `Saved to billing (Bill #${billNumber}). All selected diagnoses, surgeries, and complications have been saved.`,
+        variant: "default"
+      });
+
+    } catch (error) {
+      console.error('Error saving to billing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save to billing. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingToBilling(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Diagnoses Section */}
@@ -908,6 +1014,70 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
           )}
         </CardContent>
       </Card>
+
+      {/* Save to Billing Section */}
+      {(patientDiagnoses.length > 0 || selectedSurgeries.length > 0 || patientComplications.length > 0) && (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-700">
+              <Receipt className="h-5 w-5" />
+              Save to Billing
+            </CardTitle>
+            <CardDescription className="text-green-600">
+              Save all selected diagnoses, surgeries, and complications to create a billing record
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="bg-white p-4 rounded-lg border">
+                <h4 className="font-medium text-sm text-gray-700 mb-2">Summary to be saved:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-blue-600">Diagnoses:</span>
+                    <span className="ml-2">{patientDiagnoses.length} selected</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-green-600">Surgeries:</span>
+                    <span className="ml-2">{selectedSurgeries.length} selected</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-orange-600">Complications:</span>
+                    <span className="ml-2">{patientComplications.length} active</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Save Button */}
+              <div className="flex justify-end">
+                <Button 
+                  onClick={saveToBilling}
+                  disabled={isSavingToBilling}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isSavingToBilling ? (
+                    <>
+                      <Activity className="h-4 w-4 mr-2 animate-spin" />
+                      Saving to Billing...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save to Billing
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {billingId && (
+                <div className="text-sm text-green-600 text-center">
+                  ✅ Successfully saved to billing (ID: {billingId})
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 } 
