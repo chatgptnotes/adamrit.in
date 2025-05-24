@@ -252,6 +252,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
   const [allVisits, setAllVisits] = useState<Visit[]>([]);
   const [patientData, setPatientData] = useState<any>(null);
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<any[]>([]);
 
   // Format visit_id to bill number format
   const formatBillNumber = (visitId: string) => {
@@ -268,6 +269,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
   useEffect(() => {
     async function fetchData() {
       try {
+        // Fetch visits
         const { data: visitsData, error: visitsError } = await supabase
           .from('visits')
           .select('*')
@@ -276,6 +278,18 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
         if (visitsError) {
           console.error("Error fetching visits:", visitsError);
           return;
+        }
+
+        // Fetch doctors
+        const { data: doctorsData, error: doctorsError } = await supabase
+          .from('doctors')
+          .select('*')
+          .order('name');
+
+        if (doctorsError) {
+          console.error("Error fetching doctors:", doctorsError);
+        } else {
+          setDoctors(doctorsData || []);
         }
 
         if (visitsData && visitsData.length > 0) {
@@ -625,19 +639,11 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
     { value: 'special15', label: 'Add 15% Specialward Charges as per CGHS', percentage: 15, type: 'addition' }
   ];
 
-  // List of available consultants
-  const consultantOptions = [
-    { value: 'dr_pranal_sahare', label: 'Dr. Pranal Sahare,(Urologist)' },
-    { value: 'dr_ashwin_chichkhede', label: 'Dr. Ashwin Chichkhede, MD (Medicine)' },
-    { value: 'dr_rajesh_kumar', label: 'Dr. Rajesh Kumar (Cardiologist)' },
-    { value: 'dr_priya_sharma', label: 'Dr. Priya Sharma (Gynecologist)' },
-    { value: 'dr_amit_verma', label: 'Dr. Amit Verma (Orthopedic)' },
-    { value: 'dr_sunita_singh', label: 'Dr. Sunita Singh (ENT Specialist)' },
-    { value: 'dr_vikram_mehta', label: 'Dr. Vikram Mehta (Neurosurgeon)' },
-    { value: 'dr_kavita_jain', label: 'Dr. Kavita Jain (Dermatologist)' },
-    { value: 'dr_ravi_gupta', label: 'Dr. Ravi Gupta (Gastroenterologist)' },
-    { value: 'dr_neha_agarwal', label: 'Dr. Neha Agarwal (Pediatrician)' }
-  ];
+  // List of available consultants - now dynamic from database
+  const consultantOptions = doctors.map(doctor => ({
+    value: doctor.dr_id,
+    label: `${doctor.name}${doctor.specialization ? ` (${doctor.specialization})` : ''}`
+  }));
 
   // Handler to update consultant name
   const handleConsultantChange = (itemIdx: number, subIdx: number, consultantValue: string) => {
@@ -843,13 +849,29 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                       <tr key={`${idx}-${subIdx}`}>
                         <td>{sub.sr}</td>
                         <td>
-                          <input
-                            type="text"
-                            value={sub.item}
-                            onChange={(e) => handleItemNameChange(idx, subIdx, e.target.value)}
-                            className="w-full border-none bg-transparent text-xs p-1"
-                            style={{ minHeight: '20px' }}
-                          />
+                          {sectionType === "consultation" ? (
+                            <select
+                              value={consultantOptions.find(opt => opt.label === sub.item)?.value || ''}
+                              onChange={(e) => handleConsultantChange(idx, subIdx, e.target.value)}
+                              className="w-full border border-gray-300 rounded text-xs p-1 bg-white"
+                              style={{ minHeight: '20px' }}
+                            >
+                              <option value="">Select Doctor</option>
+                              {consultantOptions.map(option => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              value={sub.item}
+                              onChange={(e) => handleItemNameChange(idx, subIdx, e.target.value)}
+                              className="w-full border-none bg-transparent text-xs p-1"
+                              style={{ minHeight: '20px' }}
+                            />
+                          )}
                           {sub.details && <><br /><span style={{ fontSize: '11px', color: '#555' }}>{sub.details}</span></>}
                           
                           {/* Complex pricing for surgical items */}
