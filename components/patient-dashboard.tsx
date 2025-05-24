@@ -38,7 +38,9 @@ import {
   XCircle,
   Scissors,
   ClipboardList,
-  Trash2
+  Trash2,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react"
 import {
   Dialog,
@@ -684,6 +686,40 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
     });
   };
 
+  // Handler to move sub items up
+  const handleMoveSubItemUp = (itemIdx: number, subIdx: number) => {
+    if (subIdx === 0) return; // Can't move first item up
+    
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main" || !item.subItems) return item;
+        
+        const newSubItems = [...item.subItems];
+        // Swap with previous item
+        [newSubItems[subIdx - 1], newSubItems[subIdx]] = [newSubItems[subIdx], newSubItems[subIdx - 1]];
+        
+        return { ...item, subItems: newSubItems };
+      });
+    });
+  };
+
+  // Handler to move sub items down
+  const handleMoveSubItemDown = (itemIdx: number, subIdx: number) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main" || !item.subItems) return item;
+        
+        if (subIdx === item.subItems.length - 1) return item; // Can't move last item down
+        
+        const newSubItems = [...item.subItems];
+        // Swap with next item
+        [newSubItems[subIdx], newSubItems[subIdx + 1]] = [newSubItems[subIdx + 1], newSubItems[subIdx]];
+        
+        return { ...item, subItems: newSubItems };
+      });
+    });
+  };
+
   // Handler to update CGHS adjustment for surgical items
   const handleCGHSAdjustmentChange = (itemIdx: number, subIdx: number, adjustmentType: string, adjustmentValue: string) => {
     setInvoiceItems((prevItems: any[]) => {
@@ -822,12 +858,12 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
         <thead>
           <tr>
             <th style={{ width: '8%' }}>SR.NO</th>
-            <th style={{ width: '40%' }}>ITEM</th>
+            <th style={{ width: '35%' }}>ITEM</th>
             <th style={{ width: '12%' }}>CGHS NABH CODE No.</th>
             <th style={{ width: '12%' }}>CGHS NABH RATE</th>
             <th style={{ width: '8%' }}>QTY</th>
             <th style={{ width: '12%' }}>AMOUNT</th>
-            <th style={{ width: '8%' }}>ACTIONS</th>
+            <th style={{ width: '13%' }}>ACTIONS</th>
           </tr>
         </thead>
         <tbody>
@@ -1012,14 +1048,47 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                           <strong>{(sub.pricing ? sub.pricing.finalAmount : sub.amount)?.toFixed(2)}</strong>
                         </td>
                         <td className="center-align">
-                          <button
-                            onClick={() => handleDeleteSubItem(idx, subIdx)}
-                            className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
-                            style={{ fontSize: '10px' }}
-                            title="Delete row"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            {/* Move Up Button */}
+                            <button
+                              onClick={() => handleMoveSubItemUp(idx, subIdx)}
+                              disabled={subIdx === 0}
+                              className={`px-1 py-1 rounded transition-colors flex items-center justify-center ${
+                                subIdx === 0 
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                              }`}
+                              style={{ fontSize: '10px' }}
+                              title="Move up"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </button>
+                            
+                            {/* Move Down Button */}
+                            <button
+                              onClick={() => handleMoveSubItemDown(idx, subIdx)}
+                              disabled={item.subItems && subIdx === item.subItems.length - 1}
+                              className={`px-1 py-1 rounded transition-colors flex items-center justify-center ${
+                                item.subItems && subIdx === item.subItems.length - 1
+                                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                              }`}
+                              style={{ fontSize: '10px' }}
+                              title="Move down"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                            
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => handleDeleteSubItem(idx, subIdx)}
+                              className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
+                              style={{ fontSize: '10px' }}
+                              title="Delete row"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
