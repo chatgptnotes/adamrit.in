@@ -257,78 +257,14 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
       if (!billingError && billingData && Array.isArray(billingData)) {
         setExistingBillingRecords(billingData);
         
-        // If there are existing billing records, fetch the latest one's details
-        if (billingData.length > 0) {
-          const latestBilling = billingData[0];
-          setBillingId(latestBilling.id);
-          
-          // Fetch diagnoses from billing
-          const { data: savedDiagnoses } = await supabase
-            .from('billing_diagnoses')
-            .select('*')
-            .eq('billing_id', latestBilling.id);
-          
-          if (savedDiagnoses && savedDiagnoses.length > 0) {
-            const formattedDiagnoses = savedDiagnoses.map((d, index) => ({
-              id: Date.now() + index, // temporary ID for local state
-              diagnosis: {
-                id: d.diagnosis_id || '',
-                name: String(d.diagnosis_name || ''),
-                complication1: '',
-                complication2: '',
-                complication3: '',
-                complication4: ''
-              },
-              status: (d.status || 'active') as 'active' | 'resolved' | 'chronic',
-              diagnosed_date: d.diagnosed_date || new Date().toISOString().split('T')[0],
-              notes: String(d.notes || '')
-            }));
-            setPatientDiagnoses(formattedDiagnoses);
-          }
-          
-          // Fetch surgeries from billing
-          const { data: savedSurgeries } = await supabase
-            .from('billing_surgeries')
-            .select('*')
-            .eq('billing_id', latestBilling.id);
-          
-          if (savedSurgeries && savedSurgeries.length > 0) {
-            const formattedSurgeries = savedSurgeries.map(s => ({
-              id: String(s.surgery_id || ''),
-              name: String(s.surgery_name || ''),
-              code: String(s.surgery_code || ''),
-              amount: String(s.surgery_amount || ''),
-              complication1: String(s.complication1 || ''),
-              complication2: String(s.complication2 || '')
-            }));
-            setSelectedSurgeries(formattedSurgeries);
-          }
-          
-          // Fetch complications from billing
-          const { data: savedComplications } = await supabase
-            .from('billing_complications')
-            .select('*')
-            .eq('billing_id', latestBilling.id);
-          
-          if (savedComplications && savedComplications.length > 0) {
-            const formattedComplications = savedComplications.map((c, index) => ({
-              id: Date.now() + index, // temporary ID
-              complication: {
-                id: Date.now() + index,
-                complication_code: `COMP-${c.id}`,
-                name: String(c.complication_name || ''),
-                description: '',
-                severity: (c.severity || 'moderate') as 'mild' | 'moderate' | 'severe' | 'critical',
-                category: 'Saved',
-                is_active: true
-              },
-              status: (c.status || 'active') as 'active' | 'resolved' | 'monitoring',
-              occurred_date: c.occurred_date || new Date().toISOString().split('T')[0],
-              notes: String(c.notes || '')
-            }));
-            setPatientComplications(formattedComplications);
-          }
-        }
+        // For now, just show billing history without fetching detailed data
+        // This prevents React rendering errors until billing tables are fully configured
+        console.log(`Found ${billingData.length} billing records for patient`);
+        
+        // Set empty states for now
+        setPatientDiagnoses([]);
+        setSelectedSurgeries([]);
+        setPatientComplications([]);
       } else {
         console.log('No existing billing records found for patient or billing tables not set up');
         setExistingBillingRecords([]);
