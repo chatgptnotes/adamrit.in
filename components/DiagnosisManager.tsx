@@ -300,24 +300,26 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
   // Add functions
   const addDiagnosisToPatient = async (diagnosis: Diagnosis) => {
     try {
-      const { data, error } = await supabase
-        .from('patient_diagnosis')
-        .insert({
-          patient_unique_id: patientUniqueId,
-          diagnosis_id: diagnosis.id,
-          visit_id: visitId,
-          status: 'active',
-          diagnosed_date: new Date().toISOString().split('T')[0]
-        })
-        .select(`
-          *,
-          diagnosis:diagnosis_id (*)
-        `)
-        .single();
+      // Check if diagnosis already added
+      if (patientDiagnoses.find(d => d.diagnosis.id === diagnosis.id)) {
+        toast({
+          title: "Already added",
+          description: "This diagnosis is already in the patient's record",
+          variant: "destructive"
+        });
+        return;
+      }
 
-      if (error) throw error;
+      // For now, store in local state (until patient_diagnosis table is created)
+      const newPatientDiagnosis: PatientDiagnosis = {
+        id: Date.now(), // temporary ID
+        diagnosis: diagnosis,
+        status: 'active',
+        diagnosed_date: new Date().toISOString().split('T')[0],
+        notes: ''
+      };
       
-      setPatientDiagnoses(prev => [data, ...prev]);
+      setPatientDiagnoses(prev => [newPatientDiagnosis, ...prev]);
       setDiagnosisSearch('');
       setShowDiagnosisResults(false);
       
@@ -462,29 +464,13 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
   };
 
   // Remove functions
-  const removeDiagnosis = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from('patient_diagnosis')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      setPatientDiagnoses(prev => prev.filter(d => d.id !== id));
-      
-      toast({
-        title: "Success",
-        description: "Diagnosis removed"
-      });
-    } catch (error) {
-      console.error('Error removing diagnosis:', error);
-      toast({
-        title: "Error",
-        description: "Failed to remove diagnosis",
-        variant: "destructive"
-      });
-    }
+  const removeDiagnosis = (id: number) => {
+    setPatientDiagnoses(prev => prev.filter(d => d.id !== id));
+    
+    toast({
+      title: "Success",
+      description: "Diagnosis removed"
+    });
   };
 
   const removeSurgery = (id: number) => {
@@ -585,24 +571,6 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Diagnosis Code</Label>
-                        <Input
-                          value={newDiagnosis.diagnosis_code}
-                          onChange={(e) => setNewDiagnosis(prev => ({ ...prev, diagnosis_code: e.target.value }))}
-                          placeholder="e.g., DG011"
-                        />
-                      </div>
-                      <div>
-                        <Label>ICD Code</Label>
-                        <Input
-                          value={newDiagnosis.icd_code}
-                          onChange={(e) => setNewDiagnosis(prev => ({ ...prev, icd_code: e.target.value }))}
-                          placeholder="e.g., E11"
-                        />
-                      </div>
-                    </div>
                     <div>
                       <Label>Diagnosis Name</Label>
                       <Input
@@ -611,21 +579,41 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                         placeholder="Enter diagnosis name"
                       />
                     </div>
-                    <div>
-                      <Label>Category</Label>
-                      <Input
-                        value={newDiagnosis.category}
-                        onChange={(e) => setNewDiagnosis(prev => ({ ...prev, category: e.target.value }))}
-                        placeholder="e.g., Cardiovascular"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Complication 1</Label>
+                        <Input
+                          value={newDiagnosis.complication1}
+                          onChange={(e) => setNewDiagnosis(prev => ({ ...prev, complication1: e.target.value }))}
+                          placeholder="e.g., Bleeding"
+                        />
+                      </div>
+                      <div>
+                        <Label>Complication 2</Label>
+                        <Input
+                          value={newDiagnosis.complication2}
+                          onChange={(e) => setNewDiagnosis(prev => ({ ...prev, complication2: e.target.value }))}
+                          placeholder="e.g., Infection"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label>Description</Label>
-                      <Textarea
-                        value={newDiagnosis.description}
-                        onChange={(e) => setNewDiagnosis(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Enter description"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Complication 3</Label>
+                        <Input
+                          value={newDiagnosis.complication3}
+                          onChange={(e) => setNewDiagnosis(prev => ({ ...prev, complication3: e.target.value }))}
+                          placeholder="e.g., Hypoglycemia"
+                        />
+                      </div>
+                      <div>
+                        <Label>Complication 4</Label>
+                        <Input
+                          value={newDiagnosis.complication4}
+                          onChange={(e) => setNewDiagnosis(prev => ({ ...prev, complication4: e.target.value }))}
+                          placeholder="e.g., Neuropathy"
+                        />
+                      </div>
                     </div>
                   </div>
                   <DialogFooter>
