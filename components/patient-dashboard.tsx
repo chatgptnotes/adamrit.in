@@ -116,13 +116,17 @@ export const doctorMasterList = [
 ];
 
 // Re-add the surgery data since we still need it
-// Sample surgery data
-const surgeries = [
-  { id: "s1", name: "Cataract Surgery", packageAmount: 25000 },
-  { id: "s2", name: "Appendectomy", packageAmount: 35000 },
-  { id: "s3", name: "Coronary Angioplasty", packageAmount: 120000 },
-  { id: "s4", name: "Knee Replacement", packageAmount: 150000 },
-]
+// Surgery interface to match cghs_surgery table
+interface Surgery {
+  id: number;
+  surgery_name: string;
+  description: string;
+  cghs_code: string;
+  amount: number;
+  category: string;
+  duration_days: number;
+  is_active: boolean;
+}
 
 // Define the Diagnosis type since it's still used in some places
 interface Diagnosis {
@@ -1333,22 +1337,14 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
       diagnosis.icd.toLowerCase().includes(diagnosisSearchTerm.toLowerCase())
   );
   
-  // Mock data for surgeries
-  const surgeryDatabase = [
-    { id: "s1", name: "Appendectomy", cghs: "180010", category: "General Surgery", packageAmount: 22000 },
-    { id: "s2", name: "Hernia Repair", cghs: "180025", category: "General Surgery", packageAmount: 25000 },
-    { id: "s3", name: "Cholecystectomy", cghs: "180020", category: "General Surgery", packageAmount: 30000 },
-    { id: "s4", name: "Arthroscopic Knee Surgery", cghs: "330025", category: "Orthopedic", packageAmount: 35000 },
-    { id: "s5", name: "Cataract Surgery", cghs: "280015", category: "Ophthalmic", packageAmount: 18000 },
-    { id: "s6", name: "Hemorrhoidectomy", cghs: "180040", category: "General Surgery", packageAmount: 15000 },
-    { id: "s7", name: "Tonsillectomy", cghs: "155010", category: "ENT", packageAmount: 20000 }
-  ];
+  // State for surgeries from database
+  const [surgeryDatabase, setSurgeryDatabase] = useState<Surgery[]>([]);
   
   // Filter surgeries based on search term
   const filteredSurgeries = surgeryDatabase.filter(
     (surgery) => 
-      surgery.name.toLowerCase().includes(surgerySearchTerm.toLowerCase()) ||
-      surgery.cghs.toLowerCase().includes(surgerySearchTerm.toLowerCase()) ||
+      surgery.surgery_name.toLowerCase().includes(surgerySearchTerm.toLowerCase()) ||
+      surgery.cghs_code.toLowerCase().includes(surgerySearchTerm.toLowerCase()) ||
       surgery.category.toLowerCase().includes(surgerySearchTerm.toLowerCase())
   );
 
@@ -1760,8 +1756,25 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
     setVisits(data || []);
   };
 
+  // Fetch surgeries from cghs_surgery table
+  const fetchSurgeries = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('cghs_surgery')
+        .select('*')
+        .eq('is_active', true)
+        .order('surgery_name');
+      
+      if (error) throw error;
+      setSurgeryDatabase(data || []);
+    } catch (error) {
+      console.error('Error fetching surgeries:', error);
+    }
+  };
+
   useEffect(() => {
     fetchVisits();
+    fetchSurgeries();
   }, [patient?.unique_id]);
 
   // Initialize comprehensive invoice items
@@ -2044,19 +2057,19 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                                   key={surgery.id}
                                   className="flex items-center justify-between p-4 hover:bg-blue-50/50 cursor-pointer transition-colors"
                                 >
-                                  <div className="flex-grow">
-                                    <p className="font-medium">{surgery.name}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
-                                        CGHS: {surgery.cghs}
-                                      </Badge>
-                                      <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">
-                                        {surgery.category}
-                                      </Badge>
-                                    </div>
-                                  </div>
+                                                    <div className="flex-grow">
+                    <p className="font-medium">{surgery.surgery_name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
+                        CGHS: {surgery.cghs_code}
+                      </Badge>
+                      <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">
+                        {surgery.category}
+                      </Badge>
+                    </div>
+                  </div>
                                   <div className="text-right">
-                                    <p className="text-lg font-semibold text-blue-700">₹{surgery.packageAmount.toLocaleString()}</p>
+                                    <p className="text-lg font-semibold text-blue-700">₹{surgery.amount.toLocaleString()}</p>
                                   </div>
                                   <div className="ml-4">
                                     <Button
@@ -2097,17 +2110,17 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                               {selectedSurgeries.map((surgeryId) => {
-                                const surgery = surgeryDatabase.find(s => s.id === surgeryId);
+                                const surgery = surgeryDatabase.find(s => s.id.toString() === surgeryId);
                                 if (!surgery) return null;
                                 
                                 return (
                                   <tr key={surgeryId} className="hover:bg-gray-50">
                                     <td className="px-4 py-3">
-                                      <div className="text-sm font-medium text-gray-900">{surgery.name}</div>
-                                      <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                                        <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 px-1.5 py-0.5 text-[10px]">
-                                          CGHS: {surgery.cghs}
-                                        </Badge>
+                                                            <div className="text-sm font-medium text-gray-900">{surgery.surgery_name}</div>
+                      <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                        <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 px-1.5 py-0.5 text-[10px]">
+                          CGHS: {surgery.cghs_code}
+                        </Badge>
                                         <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700 px-1.5 py-0.5 text-[10px]">
                                           {surgery.category}
                                         </Badge>
@@ -2580,21 +2593,21 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                     <div 
                       key={surgery.id}
                       className="flex items-center p-4 hover:bg-blue-50/50 cursor-pointer transition-colors"
-                      onClick={() => toggleSurgerySelection(surgery.id)}
+                      onClick={() => toggleSurgerySelection(surgery.id.toString())}
                     >
                       <div className="flex items-center h-5">
                         <input
                           type="checkbox"
-                          checked={temporarySelectedSurgeries.includes(surgery.id)}
-                          onChange={() => toggleSurgerySelection(surgery.id)}
+                          checked={temporarySelectedSurgeries.includes(surgery.id.toString())}
+                          onChange={() => toggleSurgerySelection(surgery.id.toString())}
                           className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                         />
                       </div>
                       <div className="flex-grow ml-3">
-                        <p className="font-medium">{surgery.name}</p>
+                        <p className="font-medium">{surgery.surgery_name}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
-                            CGHS: {surgery.cghs}
+                            CGHS: {surgery.cghs_code}
                           </Badge>
                           <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">
                             {surgery.category}
@@ -2602,7 +2615,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-semibold text-blue-700">₹{surgery.packageAmount.toLocaleString()}</p>
+                        <p className="text-lg font-semibold text-blue-700">₹{surgery.amount.toLocaleString()}</p>
                       </div>
                     </div>
                   ))}
@@ -2652,8 +2665,8 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
               <DialogTitle>Add details for {temporarySelectedSurgeries.length} selected surgery/surgeries</DialogTitle>
               <DialogDescription>
                 {temporarySelectedSurgeries.map((surgeryId) => {
-                  const surgery = surgeryDatabase.find(s => s.id === surgeryId);
-                  return surgery ? surgery.name : "";
+                  const surgery = surgeryDatabase.find(s => s.id.toString() === surgeryId);
+                  return surgery ? surgery.surgery_name : "";
                 }).join(", ")}
               </DialogDescription>
             </DialogHeader>

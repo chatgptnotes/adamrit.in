@@ -43,7 +43,7 @@ export default function PatientDetails() {
 
         // Fetch patient's diagnoses
         const { data: diagnosesData, error: diagnosesError } = await supabase
-          .from('patient_diagnoses')
+          .from('diagnosis')
           .select(`
             *,
             diagnosis:diagnoses(*),

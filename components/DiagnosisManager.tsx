@@ -46,21 +46,20 @@ import { toast } from "@/components/ui/use-toast";
 
 // Types
 interface Diagnosis {
-  id: number;
-  diagnosis_code: string;
+  id: string;
   name: string;
-  icd_code: string;
-  category: string;
-  description: string;
-  is_active: boolean;
+  complication1?: string;
+  complication2?: string;
+  complication3?: string;
+  complication4?: string;
 }
 
 interface Package {
   id: number;
-  package_code: string;
-  name: string;
+  surgery_name: string;
   description: string;
-  base_amount: number;
+  cghs_code: string;
+  amount: number;
   category: string;
   duration_days: number;
   is_active: boolean;
@@ -101,41 +100,41 @@ interface DiagnosisManagerProps {
 export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerProps) {
   // State management
   const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
-  const [packages, setPackages] = useState<Package[]>([]);
+  const [surgeries, setSurgeries] = useState<Package[]>([]);
   const [complications, setComplications] = useState<Complication[]>([]);
   const [relatedComplications, setRelatedComplications] = useState<Complication[]>([]);
   
   const [patientDiagnoses, setPatientDiagnoses] = useState<PatientDiagnosis[]>([]);
   const [patientComplications, setPatientComplications] = useState<PatientComplication[]>([]);
-  const [selectedPackages, setSelectedPackages] = useState<Package[]>([]);
+  const [selectedSurgeries, setSelectedSurgeries] = useState<Package[]>([]);
   
   // Search and selection states
   const [diagnosisSearch, setDiagnosisSearch] = useState('');
-  const [packageSearch, setPackageSearch] = useState('');
+  const [surgerySearch, setSurgerySearch] = useState('');
   const [complicationSearch, setComplicationSearch] = useState('');
   const [showDiagnosisResults, setShowDiagnosisResults] = useState(false);
-  const [showPackageResults, setShowPackageResults] = useState(false);
+  const [showSurgeryResults, setShowSurgeryResults] = useState(false);
   const [showComplicationResults, setShowComplicationResults] = useState(false);
   
   // Dialog states
   const [showAddDiagnosisDialog, setShowAddDiagnosisDialog] = useState(false);
-  const [showAddPackageDialog, setShowAddPackageDialog] = useState(false);
+  const [showAddSurgeryDialog, setShowAddSurgeryDialog] = useState(false);
   const [showAddComplicationDialog, setShowAddComplicationDialog] = useState(false);
   
   // Form states
   const [newDiagnosis, setNewDiagnosis] = useState({
-    diagnosis_code: '',
     name: '',
-    icd_code: '',
-    category: '',
-    description: ''
+    complication1: '',
+    complication2: '',
+    complication3: '',
+    complication4: ''
   });
   
-  const [newPackage, setNewPackage] = useState({
-    package_code: '',
-    name: '',
+  const [newSurgery, setNewSurgery] = useState({
+    surgery_name: '',
     description: '',
-    base_amount: '',
+    cghs_code: '',
+    amount: '',
     category: '',
     duration_days: ''
   });
@@ -150,13 +149,13 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
 
   // Refs for click outside detection
   const diagnosisSearchRef = useRef<HTMLDivElement>(null);
-  const packageSearchRef = useRef<HTMLDivElement>(null);
+  const surgerySearchRef = useRef<HTMLDivElement>(null);
   const complicationSearchRef = useRef<HTMLDivElement>(null);
 
   // Fetch data on component mount
   useEffect(() => {
     fetchDiagnoses();
-    fetchPackages();
+    fetchSurgeries();
     fetchComplications();
     fetchPatientData();
   }, [patientUniqueId]);
@@ -167,8 +166,8 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
       if (diagnosisSearchRef.current && !diagnosisSearchRef.current.contains(event.target as Node)) {
         setShowDiagnosisResults(false);
       }
-      if (packageSearchRef.current && !packageSearchRef.current.contains(event.target as Node)) {
-        setShowPackageResults(false);
+      if (surgerySearchRef.current && !surgerySearchRef.current.contains(event.target as Node)) {
+        setShowSurgeryResults(false);
       }
       if (complicationSearchRef.current && !complicationSearchRef.current.contains(event.target as Node)) {
         setShowComplicationResults(false);
@@ -185,7 +184,6 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
       const { data, error } = await supabase
         .from('diagnosis')
         .select('*')
-        .eq('is_active', true)
         .order('name');
       
       if (error) throw error;
@@ -200,21 +198,21 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
     }
   };
 
-  const fetchPackages = async () => {
+  const fetchSurgeries = async () => {
     try {
       const { data, error } = await supabase
-        .from('packages')
+        .from('cghs_surgery')
         .select('*')
         .eq('is_active', true)
-        .order('name');
+        .order('surgery_name');
       
       if (error) throw error;
-      setPackages(data || []);
+      setSurgeries(data || []);
     } catch (error) {
-      console.error('Error fetching packages:', error);
+      console.error('Error fetching surgeries:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch packages",
+        description: "Failed to fetch surgeries",
         variant: "destructive"
       });
     }
@@ -242,7 +240,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
 
   const fetchPatientData = async () => {
     try {
-      // Fetch patient diagnoses
+      // Fetch patient diagnoses (with error handling for missing tables)
       const { data: diagnosisData, error: diagnosisError } = await supabase
         .from('patient_diagnosis')
         .select(`
@@ -252,10 +250,14 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
         .eq('patient_unique_id', patientUniqueId)
         .order('diagnosed_date', { ascending: false });
 
-      if (diagnosisError) throw diagnosisError;
-      setPatientDiagnoses(diagnosisData || []);
+      if (diagnosisError) {
+        console.log('Patient diagnosis table not available:', diagnosisError.message);
+        setPatientDiagnoses([]);
+      } else {
+        setPatientDiagnoses(diagnosisData || []);
+      }
 
-      // Fetch patient complications
+      // Fetch patient complications (with error handling for missing tables)
       const { data: complicationData, error: complicationError } = await supabase
         .from('patient_complications')
         .select(`
@@ -265,24 +267,28 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
         .eq('patient_unique_id', patientUniqueId)
         .order('occurred_date', { ascending: false });
 
-      if (complicationError) throw complicationError;
-      setPatientComplications(complicationData || []);
+      if (complicationError) {
+        console.log('Patient complications table not available:', complicationError.message);
+        setPatientComplications([]);
+      } else {
+        setPatientComplications(complicationData || []);
+      }
 
     } catch (error) {
-      console.error('Error fetching patient data:', error);
+      console.log('Patient tables not yet set up, using empty state');
+      setPatientDiagnoses([]);
+      setPatientComplications([]);
     }
   };
 
   // Filter functions for search
   const filteredDiagnoses = diagnoses.filter(diagnosis =>
-    diagnosis.name.toLowerCase().includes(diagnosisSearch.toLowerCase()) ||
-    diagnosis.icd_code.toLowerCase().includes(diagnosisSearch.toLowerCase()) ||
-    diagnosis.category.toLowerCase().includes(diagnosisSearch.toLowerCase())
+    diagnosis.name.toLowerCase().includes(diagnosisSearch.toLowerCase())
   );
 
-  const filteredPackages = packages.filter(pkg =>
-    pkg.name.toLowerCase().includes(packageSearch.toLowerCase()) ||
-    pkg.category.toLowerCase().includes(packageSearch.toLowerCase())
+  const filteredSurgeries = surgeries.filter(surgery =>
+    surgery.surgery_name.toLowerCase().includes(surgerySearch.toLowerCase()) ||
+    surgery.category.toLowerCase().includes(surgerySearch.toLowerCase())
   );
 
   const filteredComplications = complications.filter(complication =>
@@ -332,23 +338,23 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
     }
   };
 
-  const addPackageToPatient = async (pkg: Package) => {
-    if (selectedPackages.find(p => p.id === pkg.id)) {
+  const addSurgeryToPatient = async (surgery: Package) => {
+    if (selectedSurgeries.find(s => s.id === surgery.id)) {
       toast({
-        title: "Package already added",
-        description: "This package is already selected",
+        title: "Surgery already added",
+        description: "This surgery is already selected",
         variant: "destructive"
       });
       return;
     }
 
-    setSelectedPackages(prev => [...prev, pkg]);
-    setPackageSearch('');
-    setShowPackageResults(false);
+    setSelectedSurgeries(prev => [...prev, surgery]);
+    setSurgerySearch('');
+    setShowSurgeryResults(false);
     
     toast({
       title: "Success",
-      description: `Added package: ${pkg.name}`
+      description: `Added surgery: ${surgery.surgery_name}`
     });
   };
 
@@ -390,20 +396,31 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
     }
   };
 
-  const fetchRelatedComplications = async (diagnosisIds: number[]) => {
+  const fetchRelatedComplications = async (diagnosisIds: string[]) => {
     try {
-      const { data, error } = await supabase
-        .from('diagnosis_complications')
-        .select(`
-          complication:complication_id (*),
-          probability
-        `)
-        .in('diagnosis_id', diagnosisIds);
-
-      if (error) throw error;
-      
-      const related = data?.map((item: any) => item.complication).filter(Boolean) || [];
-      setRelatedComplications(related as Complication[]);
+      // For now, we'll extract complications directly from the diagnosis data
+      const selectedDiagnosis = diagnoses.find(d => diagnosisIds.includes(d.id));
+      if (selectedDiagnosis) {
+        const relatedComps = [
+          selectedDiagnosis.complication1,
+          selectedDiagnosis.complication2,
+          selectedDiagnosis.complication3,
+          selectedDiagnosis.complication4
+        ].filter(Boolean);
+        
+        // Convert to Complication objects for display
+        const complicationObjects = relatedComps.map((comp, index) => ({
+          id: index + 1,
+          complication_code: `COMP${index + 1}`,
+          name: comp!,
+          description: '',
+          severity: 'moderate' as const,
+          category: 'Related',
+          is_active: true
+        }));
+        
+        setRelatedComplications(complicationObjects);
+      }
     } catch (error) {
       console.error('Error fetching related complications:', error);
     }
@@ -422,11 +439,11 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
       
       setDiagnoses(prev => [...prev, data]);
       setNewDiagnosis({
-        diagnosis_code: '',
         name: '',
-        icd_code: '',
-        category: '',
-        description: ''
+        complication1: '',
+        complication2: '',
+        complication3: '',
+        complication4: ''
       });
       setShowAddDiagnosisDialog(false);
       
@@ -470,11 +487,11 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
     }
   };
 
-  const removePackage = (id: number) => {
-    setSelectedPackages(prev => prev.filter(p => p.id !== id));
+  const removeSurgery = (id: number) => {
+    setSelectedSurgeries(prev => prev.filter(s => s.id !== id));
     toast({
       title: "Success",
-      description: "Package removed"
+      description: "Surgery removed"
     });
   };
 
@@ -637,7 +654,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                         <div>
                           <div className="font-medium text-sm">{diagnosis.name}</div>
                           <div className="text-xs text-gray-500 mt-1">
-                            ICD: {diagnosis.icd_code} • Category: {diagnosis.category}
+                            Complications: {[diagnosis.complication1, diagnosis.complication2, diagnosis.complication3, diagnosis.complication4].filter(Boolean).join(', ') || 'None'}
                           </div>
                         </div>
                         <Plus className="h-4 w-4 text-green-600" />
@@ -663,7 +680,7 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                     <div className="flex-1">
                       <div className="font-medium text-sm">{item.diagnosis.name}</div>
                       <div className="text-xs text-gray-600 mt-1">
-                        ICD: {item.diagnosis.icd_code} • Category: {item.diagnosis.category}
+                        Related complications available
                       </div>
                       <div className="flex items-center gap-2 mt-2">
                         <Badge className={getStatusColor(item.status)}>
@@ -690,49 +707,49 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
         </CardContent>
       </Card>
 
-      {/* Packages Section */}
+      {/* Surgeries Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5 text-green-600" />
-            Treatment Packages
+            Treatment Surgeries
           </CardTitle>
           <CardDescription>
-            Select treatment packages for the patient
+            Select treatment surgeries for the patient
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Package Search */}
-          <div className="relative" ref={packageSearchRef}>
+          {/* Surgery Search */}
+          <div className="relative" ref={surgerySearchRef}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search packages by name or category..."
-                value={packageSearch}
+                placeholder="Search surgeries by name or category..."
+                value={surgerySearch}
                 onChange={(e) => {
-                  setPackageSearch(e.target.value);
-                  setShowPackageResults(true);
+                  setSurgerySearch(e.target.value);
+                  setShowSurgeryResults(true);
                 }}
-                onFocus={() => setShowPackageResults(true)}
+                onFocus={() => setShowSurgeryResults(true)}
                 className="pl-10"
               />
             </div>
             
-            {/* Package Search Results */}
-            {showPackageResults && packageSearch && (
+            {/* Surgery Search Results */}
+            {showSurgeryResults && surgerySearch && (
               <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {filteredPackages.length > 0 ? (
-                  filteredPackages.map((pkg) => (
+                {filteredSurgeries.length > 0 ? (
+                  filteredSurgeries.map((surgery) => (
                     <div
-                      key={pkg.id}
+                      key={surgery.id}
                       className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                      onClick={() => addPackageToPatient(pkg)}
+                      onClick={() => addSurgeryToPatient(surgery)}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-sm">{pkg.name}</div>
+                          <div className="font-medium text-sm">{surgery.surgery_name}</div>
                           <div className="text-xs text-gray-500 mt-1">
-                            ₹{pkg.base_amount?.toLocaleString()} • {pkg.duration_days} days • {pkg.category}
+                            ₹{surgery.amount?.toLocaleString()} • {surgery.duration_days} days • {surgery.category}
                           </div>
                         </div>
                         <Plus className="h-4 w-4 text-green-600" />
@@ -741,39 +758,39 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
                   ))
                 ) : (
                   <div className="p-3 text-sm text-gray-500 text-center">
-                    No packages found
+                    No surgeries found
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Selected Packages */}
-          {selectedPackages.length > 0 && (
+          {/* Selected Surgeries */}
+          {selectedSurgeries.length > 0 && (
             <div>
-              <Label className="text-sm font-medium mb-2 block">Selected Packages</Label>
+              <Label className="text-sm font-medium mb-2 block">Selected Surgeries</Label>
               <div className="space-y-2">
-                {selectedPackages.map((pkg) => (
-                  <div key={pkg.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                {selectedSurgeries.map((surgery) => (
+                  <div key={surgery.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex-1">
-                      <div className="font-medium text-sm">{pkg.name}</div>
-                      <div className="text-xs text-gray-600 mt-1">{pkg.description}</div>
+                      <div className="font-medium text-sm">{surgery.surgery_name}</div>
+                      <div className="text-xs text-gray-600 mt-1">{surgery.description}</div>
                       <div className="flex items-center gap-4 mt-2">
                         <Badge variant="outline" className="bg-white">
-                          ₹{pkg.base_amount?.toLocaleString()}
+                          ₹{surgery.amount?.toLocaleString()}
                         </Badge>
                         <Badge variant="outline" className="bg-white">
-                          {pkg.duration_days} days
+                          {surgery.duration_days} days
                         </Badge>
                         <Badge variant="outline" className="bg-white">
-                          {pkg.category}
+                          {surgery.category}
                         </Badge>
                       </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => removePackage(pkg.id)}
+                      onClick={() => removeSurgery(surgery.id)}
                       className="text-red-600 hover:text-red-800"
                     >
                       <X className="h-4 w-4" />
