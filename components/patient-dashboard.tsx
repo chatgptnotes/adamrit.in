@@ -119,7 +119,7 @@ export const doctorMasterList = [
 // Surgery interface to match cghs_surgery table
 interface Surgery {
   id: number;
-  surgery_name: string;
+  name: string;
   description: string;
   cghs_code: string;
   amount: number;
@@ -824,8 +824,187 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
         .right-align { text-align: right; }
         .center-align { text-align: center; }
         .surgery-pricing { font-size: 11px; }
+        
         @media print {
-          .invoice-a4-page { box-shadow: none; border: none; }
+          /* Print page setup for A4 */
+          @page {
+            size: A4;
+            margin: 15mm 10mm;
+          }
+          
+          /* Hide all interactive elements */
+          .no-print { display: none !important; }
+          .print-only { display: inline !important; }
+          button { display: none !important; }
+          .print-hide { display: none !important; }
+          select { display: none !important; }
+          input[type="button"] { display: none !important; }
+          
+          /* Hide specific interactive elements */
+          .flex.items-center.gap-1,
+          .flex.items-center.gap-2, 
+          .flex.items-center.justify-center,
+          .bg-blue-500,
+          .bg-red-500,
+          .bg-gray-300,
+          .surgery-pricing select,
+          .surgery-pricing .text-xs.border,
+          .surgery-pricing div:has(select) {
+            display: none !important;
+          }
+          
+          /* Reset page layout for print */
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            font-size: 12px !important;
+            line-height: 1.2 !important;
+          }
+          
+          /* Page setup */
+          .invoice-a4-page { 
+            box-shadow: none !important; 
+            border: none !important; 
+            margin: 0 !important;
+            padding: 0 !important;
+            max-width: none !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            page-break-inside: auto !important;
+          }
+          
+          /* Make input fields look like plain text */
+          input[type="text"], input[type="number"], textarea {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: inherit !important;
+            color: #000 !important;
+            outline: none !important;
+            height: auto !important;
+            min-height: auto !important;
+          }
+          
+          /* Hide the actions column completely */
+          .invoice-table th:last-child,
+          .invoice-table td:last-child {
+            display: none !important;
+          }
+          
+          /* Table improvements for print */
+          .invoice-table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+            font-size: 11px !important;
+            page-break-inside: auto !important;
+          }
+          
+          .invoice-table th, 
+          .invoice-table td {
+            border: 1px solid #000 !important;
+            padding: 3px 4px !important;
+            text-align: left !important;
+            vertical-align: top !important;
+            page-break-inside: avoid !important;
+          }
+          
+          .invoice-table th {
+            background-color: #f0f0f0 !important;
+            color: #000 !important;
+            font-weight: bold !important;
+            text-align: center !important;
+          }
+          
+          .invoice-section {
+            background-color: #f5f5f5 !important;
+            color: #000 !important;
+            font-weight: bold !important;
+          }
+          
+          /* Patient info section */
+          .patient-info {
+            font-size: 11px !important;
+            margin: 5px 0 !important;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Invoice headers */
+          .invoice-header {
+            text-align: center !important;
+            font-weight: bold !important;
+            font-size: 14px !important;
+            border: 2px solid #000 !important;
+            padding: 4px !important;
+            margin-bottom: 1px !important;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Clean up surgery pricing for print - show only base amount */
+          .surgery-pricing {
+            font-size: 10px !important;
+            color: #666 !important;
+          }
+          
+          .surgery-pricing > div:first-child {
+            display: block !important;
+          }
+          
+          .surgery-pricing > div:not(:first-child) {
+            display: none !important;
+          }
+          
+          /* Ensure text is black and readable */
+          * {
+            color: #000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
+          /* Signature section */
+          .signature-section {
+            page-break-inside: avoid !important;
+            margin-top: 20px !important;
+            font-size: 11px !important;
+          }
+          
+          /* Text alignment helpers */
+          .right-align { text-align: right !important; }
+          .center-align { text-align: center !important; }
+          
+          /* Remove hover effects */
+          *:hover {
+            background-color: transparent !important;
+            box-shadow: none !important;
+          }
+          
+          /* Hide dropdowns and show selected text only */
+          select + * {
+            display: none !important;
+          }
+          
+          /* Ensure only essential content is visible */
+          .invoice-table td input {
+            pointer-events: none !important;
+          }
+          
+          /* Allow page breaks where needed */
+          tbody tr {
+            page-break-inside: avoid !important;
+          }
+          
+          /* Keep headers with content */
+          thead {
+            display: table-header-group !important;
+          }
+          
+          tfoot {
+            display: table-footer-group !important;
+          }
         }
       `}</style>
       
@@ -869,7 +1048,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
             <th style={{ width: '12%' }}>CGHS NABH RATE</th>
             <th style={{ width: '8%' }}>QTY</th>
             <th style={{ width: '12%' }}>AMOUNT</th>
-            <th style={{ width: '13%' }}>ACTIONS</th>
+            <th style={{ width: '13%' }} className="no-print">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
@@ -898,20 +1077,20 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                     <tr style={{ backgroundColor: '#f0f0f0' }}>
                       <td><strong>{item.sr}</strong></td>
                       <td colSpan={3}><strong>{item.item}</strong></td>
-                      <td>
+                      <td className="no-print">
                         <button
                           onClick={() => handleAddRow(idx, sectionType)}
-                          className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
+                          className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors no-print"
                           style={{ fontSize: '10px' }}
                         >
                           + Add Row
                         </button>
                       </td>
                       <td></td>
-                      <td>
+                      <td className="no-print">
                         <button
                           onClick={() => handleDeleteMainItem(idx)}
-                          className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors flex items-center justify-center"
+                          className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors flex items-center justify-center no-print"
                           style={{ fontSize: '10px' }}
                           title="Delete section"
                         >
@@ -924,19 +1103,24 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                         <td>{sub.sr}</td>
                         <td>
                           {sectionType === "consultation" ? (
-                            <select
-                              value={consultantOptions.find(opt => opt.label === sub.item)?.value || ''}
-                              onChange={(e) => handleConsultantChange(idx, subIdx, e.target.value)}
-                              className="w-full border border-gray-300 rounded text-xs p-1 bg-white"
-                              style={{ minHeight: '20px' }}
-                            >
-                              <option value="">Select Doctor</option>
-                              {consultantOptions.map(option => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
+                            <>
+                              <select
+                                value={consultantOptions.find(opt => opt.label === sub.item)?.value || ''}
+                                onChange={(e) => handleConsultantChange(idx, subIdx, e.target.value)}
+                                className="w-full border border-gray-300 rounded text-xs p-1 bg-white no-print"
+                                style={{ minHeight: '20px' }}
+                              >
+                                <option value="">Select Doctor</option>
+                                {consultantOptions.map(option => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <span className="print-only hidden text-xs p-1" style={{ minHeight: '20px' }}>
+                                {sub.item || 'Select Doctor'}
+                              </span>
+                            </>
                           ) : (
                             <input
                               type="text"
@@ -1053,13 +1237,13 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                         <td className="right-align">
                           <strong>{(sub.pricing ? sub.pricing.finalAmount : sub.amount)?.toFixed(2)}</strong>
                         </td>
-                        <td className="center-align">
-                          <div className="flex items-center justify-center gap-1">
+                        <td className="center-align no-print">
+                          <div className="flex items-center justify-center gap-1 no-print">
                             {/* Move Up Button */}
                             <button
                               onClick={() => handleMoveSubItemUp(idx, subIdx)}
                               disabled={subIdx === 0}
-                              className={`px-1 py-1 rounded transition-colors flex items-center justify-center ${
+                              className={`px-1 py-1 rounded transition-colors flex items-center justify-center no-print ${
                                 subIdx === 0 
                                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                                   : 'bg-blue-500 text-white hover:bg-blue-600'
@@ -1074,7 +1258,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                             <button
                               onClick={() => handleMoveSubItemDown(idx, subIdx)}
                               disabled={item.subItems && subIdx === item.subItems.length - 1}
-                              className={`px-1 py-1 rounded transition-colors flex items-center justify-center ${
+                              className={`px-1 py-1 rounded transition-colors flex items-center justify-center no-print ${
                                 item.subItems && subIdx === item.subItems.length - 1
                                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                                   : 'bg-blue-500 text-white hover:bg-blue-600'
@@ -1088,7 +1272,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                             {/* Delete Button */}
                             <button
                               onClick={() => handleDeleteSubItem(idx, subIdx)}
-                              className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
+                              className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center no-print"
                               style={{ fontSize: '10px' }}
                               title="Delete row"
                             >
@@ -1137,10 +1321,10 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
                       />
                     </td>
                     <td className="right-align"><strong>{item.amount?.toFixed(2) || ''}</strong></td>
-                    <td className="center-align">
+                    <td className="center-align no-print">
                       <button
                         onClick={() => handleDeleteMainItem(idx)}
-                        className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
+                        className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center no-print"
                         style={{ fontSize: '10px' }}
                         title="Delete item"
                       >
@@ -1159,13 +1343,24 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
           <tr style={{ backgroundColor: '#f0f0f0', fontWeight: 'bold', fontSize: '14px' }}>
             <td colSpan={5} className="center-align"><strong>TOTAL BILL AMOUNT</strong></td>
             <td className="right-align"><strong>{calculateTotal().toFixed(2)}</strong></td>
-            <td></td>
+            <td className="no-print"></td>
           </tr>
         </tbody>
       </table>
 
+      {/* Print Button */}
+      <div className="no-print" style={{ textAlign: 'center', marginTop: '20px', marginBottom: '20px' }}>
+        <button
+          onClick={() => window.print()}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg flex items-center justify-center mx-auto"
+        >
+          <Printer className="h-5 w-5 mr-2" />
+          Print Invoice
+        </button>
+      </div>
+
       {/* Signature Section */}
-      <div className="flex justify-between" style={{ marginTop: '32px', fontSize: '12px' }}>
+      <div className="flex justify-between signature-section" style={{ marginTop: '32px', fontSize: '12px' }}>
         <div style={{ textAlign: 'center', width: '18%' }}>
           <div style={{ borderTop: '1px solid #000', paddingTop: '4px' }}>Bill Manager</div>
         </div>
@@ -1343,7 +1538,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
   // Filter surgeries based on search term
   const filteredSurgeries = surgeryDatabase.filter(
     (surgery) => 
-      surgery.surgery_name.toLowerCase().includes(surgerySearchTerm.toLowerCase()) ||
+      surgery.name.toLowerCase().includes(surgerySearchTerm.toLowerCase()) ||
       surgery.cghs_code.toLowerCase().includes(surgerySearchTerm.toLowerCase()) ||
       surgery.category.toLowerCase().includes(surgerySearchTerm.toLowerCase())
   );
@@ -1747,13 +1942,25 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
 
   const fetchVisits = async () => {
     if (!patient?.unique_id) return;
-    const { data, error } = await supabase
-      .from('visits')
-      .select('*')
-      .eq('patient_unique_id', patient.unique_id) // filter by patient
-      .order('created_at', { ascending: false });
-    if (error) { /* handle error */ }
-    setVisits(data || []);
+    
+    try {
+      const { data, error } = await supabase
+        .from('visits')
+        .select('*')
+        .eq('patient_unique_id', patient.unique_id) // filter by patient
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Supabase error fetching visits:', error.message || error);
+        throw error;
+      }
+      
+      setVisits(data || []);
+    } catch (error: any) {
+      console.error('Error fetching visits:', error?.message || error?.toString() || 'Unknown error');
+      // Set empty array as fallback to prevent crashes
+      setVisits([]);
+    }
   };
 
   // Fetch surgeries from cghs_surgery table
@@ -1763,12 +1970,18 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
         .from('cghs_surgery')
         .select('*')
         .eq('is_active', true)
-        .order('surgery_name');
+        .order('name');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching surgeries:', error.message || error);
+        throw error;
+      }
+      
       setSurgeryDatabase(data || []);
-    } catch (error) {
-      console.error('Error fetching surgeries:', error);
+    } catch (error: any) {
+      console.error('Error fetching surgeries:', error?.message || error?.toString() || 'Unknown error');
+      // Set empty array as fallback to prevent crashes
+      setSurgeryDatabase([]);
     }
   };
 
@@ -2058,7 +2271,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                                   className="flex items-center justify-between p-4 hover:bg-blue-50/50 cursor-pointer transition-colors"
                                 >
                                                     <div className="flex-grow">
-                    <p className="font-medium">{surgery.surgery_name}</p>
+                    <p className="font-medium">{surgery.name}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
                         CGHS: {surgery.cghs_code}
@@ -2116,7 +2329,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                                 return (
                                   <tr key={surgeryId} className="hover:bg-gray-50">
                                     <td className="px-4 py-3">
-                                                            <div className="text-sm font-medium text-gray-900">{surgery.surgery_name}</div>
+                                                            <div className="text-sm font-medium text-gray-900">{surgery.name}</div>
                       <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
                         <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700 px-1.5 py-0.5 text-[10px]">
                           CGHS: {surgery.cghs_code}
@@ -2604,7 +2817,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                         />
                       </div>
                       <div className="flex-grow ml-3">
-                        <p className="font-medium">{surgery.surgery_name}</p>
+                        <p className="font-medium">{surgery.name}</p>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
                             CGHS: {surgery.cghs_code}
@@ -2666,7 +2879,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
               <DialogDescription>
                 {temporarySelectedSurgeries.map((surgeryId) => {
                   const surgery = surgeryDatabase.find(s => s.id.toString() === surgeryId);
-                  return surgery ? surgery.surgery_name : "";
+                  return surgery ? surgery.name : "";
                 }).join(", ")}
               </DialogDescription>
             </DialogHeader>
