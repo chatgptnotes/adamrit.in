@@ -146,3 +146,68 @@ input:focus, textarea:focus, select:focus {
     @apply bg-background text-foreground;
   }
 }
+
+/* Print styles */
+@media print {
+  .hidden-for-print {
+    display: none !important;
+  }
+  
+  .invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .invoice-table th,
+  .invoice-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+  }
+  
+  .invoice-section {
+    background-color: #f8f9fa !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  button {
+    display: none !important;
+  }
+}
+
+/* Regular styles */
+.invoice-section {
+  background-color: #f8f9fa;
+}
+
+.invoice-section.hidden-for-print {
+  opacity: 0.7;
+  background-color: #f0f0f0;
+}
+
+.invoice-section button {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.invoice-section:hover button {
+  opacity: 1;
+}
+
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.invoice-table th,
+.invoice-table td {
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+}
+
+.invoice-table th {
+  background-color: #f8f9fa;
+  font-weight: 500;
+  text-align: left;
+}

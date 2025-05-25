@@ -261,7 +261,7 @@ const formatClaimId = () => {
   return `CLAIM-${year}-${random}`;
 };
 
-const formatBillNumber = (visitId: string) => {
+  const formatBillNumber = (visitId: string) => {
   // Format bill number as BL24D-16/04
   const date = new Date();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -282,6 +282,17 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
 }) {
   // State for invoice data
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
+  // State for hidden rows
+  const [hiddenRows, setHiddenRows] = useState<number[]>([]);
+
+  // Function to toggle row visibility
+  const toggleRowVisibility = (idx: number) => {
+    setHiddenRows(prev => 
+      prev.includes(idx) 
+        ? prev.filter(i => i !== idx)
+        : [...prev, idx]
+    );
+  };
 
   // Initialize comprehensive invoice items
   useEffect(() => {
@@ -298,9 +309,9 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
         { 
           type: "section", 
           title: "Surgical Package (5 Days)", 
-          dateRange: `Dt. (${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`
+          dateRange: `Dt.(${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`
         },
-
+        
         // Post-Surgical Conservative Treatment Section
         { 
           type: "section", 
@@ -350,7 +361,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
             }
           ]
         },
-
+        
         // 3) Surgical Package Charges
         {
           type: "main",
@@ -376,7 +387,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
             }
           ]
         },
-
+        
         // 4) Post-Surgical Consultation
         {
           type: "main",
@@ -420,10 +431,25 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
           ]
         }
       ];
-      
       setInvoiceItems(items);
     }
-  }, [patientData, visits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, conservativeStart2, conservativeEnd2]);
+  }, [patientData, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, conservativeStart2, conservativeEnd2]);
+
+  // Add print styles to head
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        .hidden-for-print {
+          display: none !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   const latestVisit = visits[0];
 
@@ -955,8 +981,8 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
           {invoiceItems.map((item, idx) => {
             if (item.type === "section") {
               return (
-                <tr key={idx} className="invoice-section">
-                  <td colSpan={7}>
+                <tr key={idx} className={`invoice-section ${hiddenRows.includes(idx) ? 'hidden-for-print' : ''}`}>
+                  <td colSpan={6}>
                     <input
                       type="text"
                       value={item.title}
@@ -966,6 +992,37 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                     />
                     {item.dateRange && <br />}
                     {item.dateRange}
+                  </td>
+                  <td className="text-right">
+                    <button
+                      onClick={() => toggleRowVisibility(idx)}
+                      className="p-1 rounded hover:bg-gray-100"
+                      title={hiddenRows.includes(idx) ? "Show in print" : "Hide from print"}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className={`h-5 w-5 ${hiddenRows.includes(idx) ? 'text-gray-400' : 'text-gray-600'}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        {hiddenRows.includes(idx) ? (
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          />
+                        ) : (
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        )}
+                      </svg>
+                    </button>
                   </td>
                 </tr>
               );
@@ -1955,7 +2012,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
         { 
           type: "section", 
           title: "Surgical Package (5 Days)", 
-          dateRange: `Dt. (${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`
+          dateRange: `Dt.(${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`
         },
         
         // 1) Consultation for Inpatients
@@ -2641,9 +2698,9 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
             <InvoicePage 
               patientData={patient} 
               diagnoses={diagnoses}
-              conservativeStart={conservativeStart}
+              conservativeStart={conservativeStart} 
               conservativeEnd={conservativeEnd}
-              surgicalStart={surgicalStart}
+              surgicalStart={surgicalStart} 
               surgicalEnd={surgicalEnd}
               conservativeStart2={conservativeStart2}
               conservativeEnd2={conservativeEnd2}
