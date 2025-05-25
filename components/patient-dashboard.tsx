@@ -246,14 +246,15 @@ const printStyles = `
   }
 `;
 
-function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd }: {
+function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, patientDiagnoses }: {
   patientData: Patient,
-  diagnoses: Diagnosis[],
+  diagnoses: any[],
   visits: Visit[],
   conservativeStart?: string | null,
   conservativeEnd?: string | null,
   surgicalStart?: string | null,
-  surgicalEnd?: string | null
+  surgicalEnd?: string | null,
+  patientDiagnoses?: any[]
 }) {
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
@@ -447,6 +448,40 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
                 subDiscountAmount: 2429,
                 finalAmount: 1214.00
               }
+            }
+          ]
+        },
+        
+        // 6) Conservative Treatment (Second Period)
+        {
+          type: "main",
+          sr: "6)",
+          item: "Conservative Treatment",
+          details: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`,
+          subItems: [
+            {
+              sr: "i)",
+              item: "Dr. Pranal Sahare,(Urologist)",
+              details: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`,
+              rate: 350.00,
+              qty: 6,
+              amount: 2100.00
+            },
+            {
+              sr: "ii)",
+              item: "Dr. Ashwin Chichkhede, MD (Medicine)",
+              details: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`,
+              rate: 350.00,
+              qty: 6,
+              amount: 2100.00
+            },
+            {
+              sr: "iii)",
+              item: "Accommodation For General Ward",
+              details: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`,
+              rate: 1500.00,
+              qty: 6,
+              amount: 9000.00
             }
           ]
         }
@@ -657,6 +692,44 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
   const handleDeleteMainItem = (itemIdx: number) => {
     setInvoiceItems(prevItems => {
       return prevItems.filter((_, idx) => idx !== itemIdx);
+    });
+  };
+
+  // Handler to move main item up
+  const handleMoveMainItemUp = (itemIdx: number) => {
+    setInvoiceItems(prevItems => {
+      if (itemIdx === 0) return prevItems; // Can't move first item up
+      
+      const newItems = [...prevItems];
+      const temp = newItems[itemIdx];
+      newItems[itemIdx] = newItems[itemIdx - 1];
+      newItems[itemIdx - 1] = temp;
+      
+      return newItems;
+    });
+  };
+
+  // Handler to move main item down
+  const handleMoveMainItemDown = (itemIdx: number) => {
+    setInvoiceItems(prevItems => {
+      if (itemIdx === prevItems.length - 1) return prevItems; // Can't move last item down
+      
+      const newItems = [...prevItems];
+      const temp = newItems[itemIdx];
+      newItems[itemIdx] = newItems[itemIdx + 1];
+      newItems[itemIdx + 1] = temp;
+      
+      return newItems;
+    });
+  };
+
+  // Handler to edit main item
+  const handleEditMainItem = (itemIdx: number, newName: string) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main") return item;
+        return { ...item, item: newName };
+      });
     });
   };
 
@@ -902,9 +975,22 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
           <div style={{ textAlign: 'right' }}><strong>DATE:-</strong> {formatDateForDisplay(new Date().toISOString())}</div>
           <div style={{ marginTop: '20px' }}><strong>DIAGNOSIS</strong>:</div>
           <div style={{ margin: '8px 0' }}>
-            {patientData.latestVisit?.reason || 'No diagnosis recorded'}
+            <textarea
+              placeholder="Enter diagnosis here..."
+              className="w-full border border-gray-300 rounded p-2 text-sm resize-none"
+              style={{ 
+                minHeight: '60px', 
+                fontSize: '12px',
+                fontFamily: 'Arial, sans-serif',
+                backgroundColor: 'white'
+              }}
+              defaultValue={patientDiagnoses && patientDiagnoses.length > 0 
+                ? patientDiagnoses.map(d => d.diagnosis?.name || d.name).join(', ')
+                : (patientData.latestVisit?.reason || '')
+              }
+            />
           </div>
-          <div><strong>DATE OF ADMISSION</strong>: {patientData.date_of_admission ? formatDateForDisplay(patientData.date_of_admission) : 'Not admitted'}</div>
+          <div><strong>DATE OF ADMISSION</strong>: {patientData.latestVisit?.visit_date ? formatDateForDisplay(patientData.latestVisit.visit_date) : 'Not admitted'}</div>
           <div><strong>DATE OF DISCHARGE</strong>: {patientData.date_of_discharge ? formatDateForDisplay(patientData.date_of_discharge) : 'Not discharged'}</div>
         </div>
       </div>
@@ -1360,6 +1446,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
   const [isSearchResultsVisible, setIsSearchResultsVisible] = useState(false)
   const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([])
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<string | null>(null)
+  const [patientDiagnoses, setPatientDiagnoses] = useState<any[]>([]) // For DiagnosisManager data
   
   // State for surgeries and selected surgery
   const [surgerySearchTerm, setSurgerySearchTerm] = useState('')
@@ -1416,7 +1503,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
 
   const router = useRouter();
   const params = useParams();
-  const patientId = params.id; // or whatever your param is called
+  const patientId = params?.id; // or whatever your param is called
 
   // Navigate to settings page
   const goToSettings = () => {
@@ -1779,6 +1866,12 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
     setHasUnsavedChanges(true);
   };
 
+  // Handle diagnoses changes from DiagnosisManager
+  const handleDiagnosesChange = (newDiagnoses: any[]) => {
+    setPatientDiagnoses(newDiagnoses);
+    setHasUnsavedChanges(true);
+  };
+
   // Add resize event handlers
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -2102,6 +2195,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                     <DiagnosisManager 
                       patientUniqueId={patient?.unique_id || ''} 
                       visitId={visits[0]?.visit_id || undefined}
+                      onDiagnosesChange={handleDiagnosesChange}
                     />
                   </TabsContent>
                   
@@ -2548,12 +2642,13 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
             </div>
             <InvoicePage 
               patientData={patient} 
-              diagnoses={diagnoses} 
+              diagnoses={patientDiagnoses} 
               conservativeStart={conservativeStart} 
               conservativeEnd={conservativeEnd}
               surgicalStart={surgicalStart} 
               surgicalEnd={surgicalEnd}
               visits={visits}
+              patientDiagnoses={patientDiagnoses}
             />
           </div>
         </div>

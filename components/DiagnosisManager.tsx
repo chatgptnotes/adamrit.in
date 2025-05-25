@@ -97,9 +97,10 @@ interface PatientComplication {
 interface DiagnosisManagerProps {
   patientUniqueId: string;
   visitId?: string;
+  onDiagnosesChange?: (diagnoses: PatientDiagnosis[]) => void;
 }
 
-export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerProps) {
+export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }: DiagnosisManagerProps) {
   // State management
   const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
   const [surgeries, setSurgeries] = useState<Package[]>([]);
@@ -185,6 +186,13 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Notify parent component when diagnoses change
+  useEffect(() => {
+    if (onDiagnosesChange) {
+      onDiagnosesChange(patientDiagnoses);
+    }
+  }, [patientDiagnoses, onDiagnosesChange]);
 
   // Fetch functions
   const fetchDiagnoses = async () => {
