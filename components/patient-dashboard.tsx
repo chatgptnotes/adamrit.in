@@ -2403,33 +2403,39 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
             {/* Investigations Section with Tabs */}
             <Card className="shadow-2xl bg-white/95 backdrop-blur-lg rounded-3xl border border-blue-100/40 overflow-hidden">
               <CardHeader className="pb-4 px-6 pt-6 bg-gradient-to-r from-blue-50/60 to-indigo-50/60 border-b border-blue-100/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-semibold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent tracking-tight">Investigations</CardTitle>
-                    <CardDescription className="text-blue-600/70 text-sm mt-1 leading-relaxed">All investigations and reports</CardDescription>
-                  </div>
-                  {/* Investigation Tabs */}
-                  <div className="flex gap-2.5">
-                    {['all', 'radiology', 'lab', 'other'].map(tab => (
-                      <button
-                        key={tab}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 border shadow-sm ${selectedInvTab === tab ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg scale-105' : 'bg-white/90 text-blue-600 border-blue-200/60 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-md hover:scale-105'}`}
-                        onClick={() => setSelectedInvTab(tab)}
-                      >
-                        {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                      </button>
-                    ))}
-                  </div>
+                <div>
+                  <CardTitle className="text-xl font-semibold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent tracking-tight">Investigations</CardTitle>
+                  <CardDescription className="text-blue-600/70 text-sm mt-1 leading-relaxed">All investigations and reports</CardDescription>
+                </div>
+                {/* Investigation Tabs */}
+                <div className="flex gap-2 mt-4 flex-wrap">
+                  {['All', 'Radiology', 'Lab', 'Other'].map(tab => (
+                    <button
+                      key={tab}
+                      className={`px-8 py-3 rounded-full text-sm font-medium transition-all duration-300 ${
+                        selectedInvTab === tab.toLowerCase() 
+                        ? 'bg-blue-600 text-white shadow-lg scale-105' 
+                        : 'bg-white hover:bg-blue-50 text-blue-600 hover:shadow'
+                      }`}
+                      onClick={() => setSelectedInvTab(tab.toLowerCase())}
+                    >
+                      {tab}
+                    </button>
+                  ))}
                 </div>
               </CardHeader>
               <CardContent className="bg-white/60 px-6 py-5">
                 {/* Day Tabs (D1-D4) for all except 'all' tab */}
                 {selectedInvTab !== 'all' && (
-                  <div className="flex gap-2.5 mb-6">
+                  <div className="flex gap-2 mb-6 flex-wrap">
                     {['D1', 'D2', 'D3', 'D4'].map(day => (
                       <button
                         key={day}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 border shadow-sm ${selectedInvDay === day ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg' : 'bg-white/90 text-blue-600 border-blue-200/60 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-md'}`}
+                        className={`px-8 py-3 rounded-full text-sm font-medium transition-all duration-300 ${
+                          selectedInvDay === day 
+                          ? 'bg-blue-600 text-white shadow-lg scale-105' 
+                          : 'bg-white hover:bg-blue-50 text-blue-600 hover:shadow'
+                        }`}
                         onClick={() => setSelectedInvDay(day)}
                       >
                         {day}
@@ -2474,11 +2480,15 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                 <CardDescription className="text-blue-600/70 text-sm mt-1 leading-relaxed">To be given</CardDescription>
                       </div>
                       {/* Day Tabs */}
-                      <div className="flex gap-2.5">
+                      <div className="flex gap-2 mt-4 flex-wrap">
                         {['D1', 'D2', 'D3', 'D4'].map(day => (
                           <button
                             key={day}
-                            className={`px-5 py-2.5 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 border shadow-sm ${selectedMedDay === day ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg' : 'bg-white/90 text-blue-600 border-blue-200/60 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-md'}`}
+                            className={`px-8 py-3 rounded-full text-sm font-medium transition-all duration-300 ${
+                              selectedMedDay === day 
+                              ? 'bg-blue-600 text-white shadow-lg scale-105' 
+                              : 'bg-white hover:bg-blue-50 text-blue-600 hover:shadow'
+                            }`}
                             onClick={() => setSelectedMedDay(day)}
                           >
                             {day}
