@@ -898,7 +898,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
       
       {/* Header */}
       <div className="invoice-header">FINAL BILL</div>
-      <div className="invoice-header">ECHS</div>
+      <div className="invoice-header">{patientData.corporate || 'ECHS'}</div>
       <div className="invoice-header">CLAIM ID - {formatClaimId()}</div>
       
       {/* Patient Information */}
@@ -909,8 +909,8 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
           <div><strong>NAME OF PATIENT</strong>: {patientData.name.toUpperCase()}</div>
           <div><strong>AGE</strong>: {patientData.age} YEARS</div>
           <div><strong>SEX</strong>: {patientData.gender.toUpperCase()}</div>
-          <div><strong>NAME OF ECHS BENEFICIARY</strong>: {patientData.name.toUpperCase()}</div>
-          <div><strong>RELATION WITH ECHS EMPLOYEE</strong>: SELF</div>
+          <div><strong>NAME OF {patientData.corporate || 'ECHS'} BENEFICIARY</strong>: {patientData.name.toUpperCase()}</div>
+          <div><strong>RELATION WITH {patientData.corporate || 'ECHS'} EMPLOYEE</strong>: SELF</div>
           <div><strong>RANK</strong>: Sep (RETD)</div>
           <div><strong>SERVICE NO</strong>: 1231207F</div>
           <div><strong>CATEGORY</strong>: <span style={{ backgroundColor: '#90EE90', padding: '2px' }}>GENERAL</span></div>
@@ -932,8 +932,8 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
           <tr>
             <th style={{ width: '8%' }}>SR.NO</th>
             <th style={{ width: '35%' }}>ITEM</th>
-            <th style={{ width: '12%' }}>CGHS NABH CODE No.</th>
-            <th style={{ width: '12%' }}>CGHS NABH RATE</th>
+            <th style={{ width: '12%' }}>{patientData.corporate || 'CGHS'} NABH CODE No.</th>
+            <th style={{ width: '12%' }}>{patientData.corporate || 'CGHS'} NABH RATE</th>
             <th style={{ width: '8%' }}>QTY</th>
             <th style={{ width: '12%' }}>AMOUNT</th>
             <th style={{ width: '13%' }}>ACTIONS</th>
@@ -1269,6 +1269,7 @@ interface Patient {
   last_visit_date?: string;
   date_of_admission?: string;
   date_of_discharge?: string;
+  corporate?: string;  // Added corporate field
 }
 
 // Add Visit interface after the Patient interface
