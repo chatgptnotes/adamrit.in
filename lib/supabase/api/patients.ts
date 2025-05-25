@@ -1,4 +1,5 @@
 import { supabase } from '../client';
+import { withErrorHandler, APIError } from '@/lib/utils/error-handler';
 
 // Types
 export interface Patient {
@@ -32,19 +33,20 @@ export async function getAllPatients() {
 }
 
 // Get a patient by ID
-export async function getPatientById(id: string) {
-  const { data, error } = await supabase
-    .from('patients')
-    .select('*')
-    .eq('id', id)
-    .single();
-  
-  if (error) {
-    console.error(`Error fetching patient with ID ${id}:`, error);
-    throw error;
-  }
-  
-  return data;
+export async function getPatient(id: string) {
+  return withErrorHandler(
+    Promise.resolve(
+      supabase
+        .from('patients')
+        .select('*')
+        .eq('id', id)
+        .single()
+    ).then(({ data, error }) => {
+      if (error) throw new APIError(error.message);
+      if (!data) throw new APIError('Patient not found');
+      return data;
+    })
+  );
 }
 
 // Create a new patient

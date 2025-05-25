@@ -1,15 +1,15 @@
-import type React from "react"
-import "@/app/globals.css"
-import { Inter } from "next/font/google"
-import { ClientLayout } from "@/components/client-layout"
+import type { Metadata } from "next";
+import "./globals.css";
+import { Inter } from "next/font/google";
+import { ClientLayout } from "@/components/client-layout";
+import { Toaster } from "@/components/ui/toaster";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
-  title: "ESIC Package Management - Hope Hospital",
-  description: "Manage diagnoses, surgeries, and complications for ESIC patients",
-    generator: 'v0.dev'
-}
+export const metadata: Metadata = {
+  title: "Hope Hospital",
+  description: "Hospital Management System",
+};
 
 export default function RootLayout({
   children,
@@ -18,11 +18,33 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
       <body className={inter.className}>
-        <ClientLayout>
-          {children}
-        </ClientLayout>
+        <div className="min-h-screen bg-gray-50">
+          <ClientLayout>
+            {children}
+          </ClientLayout>
+          <Toaster />
+        </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.onerror = function(message, source, lineno, colno, error) {
+                console.error('Global error:', { message, source, lineno, colno, error });
+                return false;
+              };
+              
+              window.onunhandledrejection = function(event) {
+                console.error('Unhandled promise rejection:', event.reason);
+                event.preventDefault();
+              };
+            `,
+          }}
+        />
       </body>
     </html>
-  )
+  );
 }
