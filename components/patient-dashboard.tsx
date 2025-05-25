@@ -2207,6 +2207,10 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
     }
   };
 
+  // Add state for history and examination details at the top of the PatientDashboard component
+  const [historyDetails, setHistoryDetails] = useState("");
+  const [examinationFindings, setExaminationFindings] = useState("");
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-900" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       {/* Resizable Secondary Sidebar */}
@@ -2274,16 +2278,16 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                       Clinical Mgmt
                     </TabsTrigger>
                     <TabsTrigger 
-                      value="surgeries"
+                      value="history"
                       className="flex-1 text-center rounded-lg px-3 py-2.5 data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:shadow-md data-[state=active]:text-blue-700 text-xs tracking-wide transition-all duration-300"
                     >
-                      Surgeries
+                      History
                     </TabsTrigger>
                     <TabsTrigger 
-                      value="complications"
+                      value="examination"
                       className="flex-1 text-center rounded-lg px-3 py-2.5 data-[state=active]:bg-white data-[state=active]:font-semibold data-[state=active]:shadow-md data-[state=active]:text-blue-700 text-xs tracking-wide transition-all duration-300"
                     >
-                      Compl.
+                      Examination
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="diagnoses">
@@ -2468,6 +2472,28 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                       />
                     </div>
                   </TabsContent>
+                  <TabsContent value="history">
+                    <div className="mb-4">
+                      <Label className="block text-sm font-medium mb-2">History Details</Label>
+                      <Textarea
+                        placeholder="Enter patient history details here..."
+                        value={historyDetails}
+                        onChange={e => setHistoryDetails(e.target.value)}
+                        className="w-full min-h-[100px] text-sm border border-blue-200 rounded-lg p-2"
+                      />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="examination">
+                    <div className="mb-4">
+                      <Label className="block text-sm font-medium mb-2">Examination Findings</Label>
+                      <Textarea
+                        placeholder="Enter examination findings here..."
+                        value={examinationFindings}
+                        onChange={e => setExaminationFindings(e.target.value)}
+                        className="w-full min-h-[100px] text-sm border border-blue-200 rounded-lg p-2"
+                      />
+                    </div>
+                  </TabsContent>
                 </Tabs>
               </CardContent>
             </Card>
@@ -2601,11 +2627,12 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                   {['All', 'Radiology', 'Lab', 'Other'].map(tab => (
                     <button
                       key={tab}
-                      className={`px-8 py-3 rounded-full text-sm font-medium transition-all duration-300 ${
-                        selectedInvTab === tab.toLowerCase() 
-                        ? 'bg-blue-600 text-white shadow-lg scale-105' 
-                        : 'bg-white hover:bg-blue-50 text-blue-600 hover:shadow'
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 border ${
+                        selectedInvTab === tab.toLowerCase()
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-white hover:bg-blue-50 text-blue-700 border-blue-200 hover:shadow-sm'
                       }`}
+                      style={{ minWidth: 48, minHeight: 28, lineHeight: '1.2' }}
                       onClick={() => setSelectedInvTab(tab.toLowerCase())}
                     >
                       {tab}
@@ -2614,17 +2641,18 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                 </div>
               </CardHeader>
               <CardContent className="bg-white/60 px-6 py-5">
-                {/* Day Tabs (D1-D4) for all except 'all' tab */}
+                {/* Day Tabs (D1-D30) for all except 'all' tab */}
                 {selectedInvTab !== 'all' && (
-                  <div className="flex gap-2 mb-6 flex-wrap">
-                    {['D1', 'D2', 'D3', 'D4'].map(day => (
+                  <div className="flex gap-1 mb-6 flex-wrap">
+                    {Array.from({ length: 30 }, (_, i) => `D${i + 1}`).map(day => (
                       <button
                         key={day}
-                        className={`px-8 py-3 rounded-full text-sm font-medium transition-all duration-300 ${
-                          selectedInvDay === day 
-                          ? 'bg-blue-600 text-white shadow-lg scale-105' 
-                          : 'bg-white hover:bg-blue-50 text-blue-600 hover:shadow'
+                        className={`px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 border ${
+                          selectedInvDay === day
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                            : 'bg-white hover:bg-blue-50 text-blue-700 border-blue-200 hover:shadow-sm'
                         }`}
+                        style={{ minWidth: 28, minHeight: 24, lineHeight: '1.1' }}
                         onClick={() => setSelectedInvDay(day)}
                       >
                         {day}
@@ -2669,15 +2697,16 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                 <CardDescription className="text-blue-600/70 text-sm mt-1 leading-relaxed">To be given</CardDescription>
                       </div>
                       {/* Day Tabs */}
-                      <div className="flex gap-2 mt-4 flex-wrap">
-                        {['D1', 'D2', 'D3', 'D4'].map(day => (
+                      <div className="flex gap-1 mb-4 flex-wrap">
+                        {Array.from({ length: 30 }, (_, i) => `D${i + 1}`).map(day => (
                           <button
                             key={day}
-                            className={`px-8 py-3 rounded-full text-sm font-medium transition-all duration-300 ${
-                              selectedMedDay === day 
-                              ? 'bg-blue-600 text-white shadow-lg scale-105' 
-                              : 'bg-white hover:bg-blue-50 text-blue-600 hover:shadow'
+                            className={`px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 border ${
+                              selectedMedDay === day
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                : 'bg-white hover:bg-blue-50 text-blue-700 border-blue-200 hover:shadow-sm'
                             }`}
+                            style={{ minWidth: 28, minHeight: 24, lineHeight: '1.1' }}
                             onClick={() => setSelectedMedDay(day)}
                           >
                             {day}
@@ -2693,17 +2722,27 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                       />
               </CardContent>
             </Card>
-            <div className="flex justify-end gap-4 pt-2">
-                <Button variant="outline" onClick={handleGenerateInvoice} className="bg-white/90 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border-blue-200/60 hover:border-blue-300 transition-all duration-300 hover:shadow-md rounded-xl font-medium px-6 py-3">
-                  <Receipt className="mr-2 h-4 w-4" />
-                  Generate Invoice
-                </Button>
-                <Button variant="outline" onClick={handleGenerateCaseSheet} className="bg-white/90 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border-blue-200/60 hover:border-blue-300 transition-all duration-300 hover:shadow-md rounded-xl font-medium px-6 py-3">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Generate Case Sheet
-                </Button>
-                <Button onClick={handleSaveChanges} disabled={!hasUnsavedChanges} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl font-semibold px-6 py-3 tracking-wide">
+            <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  onClick={handleSaveChanges} 
+                  disabled={!hasUnsavedChanges} 
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-md font-semibold px-3 py-1 text-xs min-w-[90px]"
+                >
                   Save Changes
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleGenerateInvoice} 
+                  className="bg-white/90 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border-blue-200/60 hover:border-blue-300 transition-all duration-300 hover:shadow-md rounded-md font-medium px-3 py-1 text-xs min-w-[80px]"
+                >
+                  Discharge
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleGenerateCaseSheet} 
+                  className="bg-white/90 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border-blue-200/60 hover:border-blue-300 transition-all duration-300 hover:shadow-md rounded-md font-medium px-3 py-1 text-xs min-w-[120px]"
+                >
+                  Discharge Summary
                 </Button>
             </div>
           </div>
