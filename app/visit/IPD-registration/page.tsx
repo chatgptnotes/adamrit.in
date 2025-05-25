@@ -14,37 +14,79 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Search } from "lucide-react"
+import { createVisit } from "@/lib/supabase/api/visits"
+import { toast } from "@/components/ui/use-toast"
 
 export default function RegisterNewIPDVisit() {
   const searchParams = useSearchParams()
   const router = useRouter()
   
   // Get patient details from URL parameters
-  const patientId = searchParams.get("patientId") || ""
-  const patientName = searchParams.get("name") || ""
+  const patientId = searchParams?.get("patientId") || ""
+  const patientName = searchParams?.get("name") || ""
+  const patientUniqueId = searchParams?.get("uniqueId") || ""
   
   const [formData, setFormData] = useState({
     visitDate: new Date().toISOString().split("T")[0],
     visitType: "IPD", // Default to IPD
     appointmentWith: "",
-    reasonForVisit: "",
-    diagnosis: "",
-    surgery: "",
-    referringDoctor: ""
+    visitReason: "",
+    diagnosis: [] as string[],
+    surgery: [] as string[],
+    referringDoctor: "",
+    claim_id: "",
+    relation_with_employee: "",
+    status: "Active"
   })
   
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value })
   }
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // In a real application, you would save this data to your database
-    console.log("Submitting IPD visit form:", formData)
-    
-    // Redirect to patient dashboard
-    router.push("/?tab=today-ipd-dashboard")
+    try {
+      // Generate a unique visit ID
+      const visitId = `VISIT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      const visitData = {
+        visit_id: visitId,
+        patient_unique_id: patientUniqueId,
+        visit_date: formData.visitDate,
+        visit_type: formData.visitType,
+        department: formData.visitType, // Also save as department for compatibility
+        appointment_with: formData.appointmentWith,
+        doctor_name: formData.appointmentWith, // For now, use the same value
+        visit_reason: formData.visitReason,
+        reason: formData.visitReason, // Also save as reason for compatibility
+        referring_doctor: formData.referringDoctor,
+        diagnosis: formData.diagnosis,
+        surgery: formData.surgery,
+        claim_id: formData.claim_id,
+        relation_with_employee: formData.relation_with_employee,
+        status: formData.status,
+        created_at: new Date().toISOString()
+      };
+
+      const newVisit = await createVisit(visitData);
+      console.log("IPD visit registered successfully:", newVisit);
+
+      toast({
+        title: "Success",
+        description: "IPD visit registered successfully"
+      });
+      
+      // Redirect to patient dashboard
+      router.push("/?tab=today-ipd-dashboard")
+    } catch (err) {
+      console.error("Error registering IPD visit:", err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "An unexpected error occurred while registering the visit",
+        variant: "destructive"
+      });
+    }
   }
   
   return (
@@ -88,97 +130,96 @@ export default function RegisterNewIPDVisit() {
               <label className="block mb-2 font-medium">
                 Appointment With <span className="text-red-500">*</span>
               </label>
-              <Select 
-                onValueChange={(value) => handleChange("appointmentWith", value)}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Doctor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Dr. A. Kumar">Dr. A. Kumar</SelectItem>
-                  <SelectItem value="Dr. S. Mehta">Dr. S. Mehta</SelectItem>
-                  <SelectItem value="Dr. R. Singh">Dr. R. Singh</SelectItem>
-                  <SelectItem value="Dr. P. Gupta">Dr. P. Gupta</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="block mb-2 font-medium">
-                Reason for Visit <span className="text-red-500">*</span>
-              </label>
               <Input 
-                placeholder="Reason for visit"
-                value={formData.reasonForVisit}
-                onChange={(e) => handleChange("reasonForVisit", e.target.value)}
+                placeholder="Doctor's name"
+                value={formData.appointmentWith}
+                onChange={(e) => handleChange("appointmentWith", e.target.value)}
                 required
+                className="w-full"
               />
-            </div>
-          </div>
-        </div>
-        
-        {/* Medical Information Section */}
-        <div className="mb-8">
-          <div className="bg-blue-50 p-4 rounded-md mb-4">
-            <h2 className="text-xl text-blue-700 font-bold">Medical Information</h2>
-          </div>
-          
-          <div className="space-y-6">
-            <div>
-              <label className="block mb-2 font-medium">
-                Diagnosis <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Input 
-                  placeholder="Search for a diagnosis..."
-                  className="pr-10"
-                  value={formData.diagnosis}
-                  onChange={(e) => handleChange("diagnosis", e.target.value)}
-                  required
-                />
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block mb-2 font-medium">
-                Surgery (if applicable)
-              </label>
-              <div className="relative">
-                <Input 
-                  placeholder="Search for a surgery..."
-                  className="pr-10"
-                  value={formData.surgery}
-                  onChange={(e) => handleChange("surgery", e.target.value)}
-                />
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
             </div>
             
             <div>
               <label className="block mb-2 font-medium">
                 Referring Doctor
               </label>
-              <Select onValueChange={(value) => handleChange("referringDoctor", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Referring Doctor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Dr. A. Kumar">Dr. A. Kumar</SelectItem>
-                  <SelectItem value="Dr. P. Gupta">Dr. P. Gupta</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input 
+                placeholder="Referring doctor's name"
+                value={formData.referringDoctor}
+                onChange={(e) => handleChange("referringDoctor", e.target.value)}
+                className="w-full"
+              />
             </div>
           </div>
         </div>
         
-        {/* Form Controls */}
-        <div className="flex justify-end space-x-4 mt-8">
-          <Link href="/?tab=today-opd-dashboard">
-            <Button variant="outline" type="button">Cancel</Button>
-          </Link>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Register IPD Visit</Button>
+        {/* Reason and Diagnosis Section */}
+        <div className="mb-8">
+          <div className="bg-blue-50 p-4 rounded-md mb-4">
+            <h2 className="text-xl text-blue-700 font-bold">Reason and Diagnosis</h2>
+          </div>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block mb-2 font-medium">
+                Reason for Visit <span className="text-red-500">*</span>
+              </label>
+              <Textarea 
+                placeholder="Enter the reason for visit"
+                value={formData.visitReason}
+                onChange={(e) => handleChange("visitReason", e.target.value)}
+                required
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {/* Additional Details Section */}
+        <div className="mb-8">
+          <div className="bg-blue-50 p-4 rounded-md mb-4">
+            <h2 className="text-xl text-blue-700 font-bold">Additional Details</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block mb-2 font-medium">
+                Claim ID
+              </label>
+              <Input 
+                placeholder="Enter claim ID"
+                value={formData.claim_id}
+                onChange={(e) => handleChange("claim_id", e.target.value)}
+                className="w-full"
+              />
+            </div>
+            
+            <div>
+              <label className="block mb-2 font-medium">
+                Relation with Employee
+              </label>
+              <Input 
+                placeholder="Enter relation"
+                value={formData.relation_with_employee}
+                onChange={(e) => handleChange("relation_with_employee", e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {/* Submit Button */}
+        <div className="flex justify-end space-x-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+          >
+            Cancel
+          </Button>
+          <Button type="submit">
+            Register Visit
+          </Button>
         </div>
       </form>
     </div>

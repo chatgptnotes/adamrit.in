@@ -4,6 +4,8 @@ import { toast } from "@/components/ui/use-toast";
 import { CalendarPlus, Plus, X, Search, Eye } from "lucide-react";
 import { PatientRegistration } from "./patient-registration";
 import { supabase } from "@/lib/supabase/client";
+import { createVisit, getPatientVisits, Visit } from '@/lib/supabase/api/visits';
+import { APIError } from '@/lib/utils/error-handler';
 
 export function PatientRegistryList() {
   const [showAddPatient, setShowAddPatient] = useState(false);
@@ -98,27 +100,29 @@ export function PatientRegistryList() {
     try {
       console.log("Submitting patient data:", patientData);
       
-      // Generate unique patient ID
-      const generateUniqueId = () => {
-        const year = new Date().getFullYear();
-        const randomNum = Math.floor(10000 + Math.random() * 90000); // 5-digit random number
-        return `PAT-${year}-${randomNum}`;
-      };
-
       // Clean the data to match database schema
       const cleanedData = {
         ...patientData,
-        // Generate unique_id if not provided
-        unique_id: patientData.unique_id || generateUniqueId(),
-        // Convert age to number if it's a string
-        age: patientData.age ? parseInt(patientData.age) : null,
-        // Fix date fields - convert empty strings to null
+        // Ensure required fields are present
+        patient_id: patientData.patient_id,
+        unique_id: patientData.unique_id,
+        patient_unique_id: patientData.patient_unique_id,
+        name: patientData.name,
+        age: parseInt(patientData.age),
+        gender: patientData.gender,
+        registration_date: patientData.registration_date,
+        // Optional fields with defaults
+        phone: patientData.phone || null,
+        address: patientData.address || null,
+        insurance_status: patientData.insurance_status || 'Active',
+        last_visit_date: patientData.last_visit_date || null,
+        date_of_admission: patientData.date_of_admission || null,
+        date_of_discharge: patientData.date_of_discharge || null,
+        corporate: patientData.corporate || null,
+        // Additional fields
         dob: patientData.dob && patientData.dob.trim() !== '' ? patientData.dob : null,
-        registration_date: patientData.registration_date && patientData.registration_date.trim() !== '' ? patientData.registration_date : new Date().toISOString().split('T')[0],
-        // Ensure boolean fields are properly set
         temp_reg: patientData.temp_reg || false,
         consultant_own: patientData.consultant_own || false,
-        // Remove any undefined or null file fields that might cause issues
         photo_url: patientData.photo_url instanceof File ? null : patientData.photo_url,
         referral_letter_url: patientData.referral_letter_url instanceof File ? null : patientData.referral_letter_url,
       };
@@ -148,10 +152,10 @@ export function PatientRegistryList() {
         setShowAddPatient(false);
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
+      console.error("Error adding patient:", err);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred while adding the patient",
         variant: "destructive"
       });
     }
@@ -324,11 +328,96 @@ export function PatientRegistryList() {
       ...visitForm,
       patientId: patient.id,
       patientName: patient.name,
+      visitDate: new Date().toISOString().split('T')[0],
+      visitType: "",
+      visitReason: "",
+      referringDoctor: "",
+      appointmentWith: "",
+      claim_id: patient.corporate === "ESIC" ? `ESIC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}` : "",
+      relation_with_employee: "",
+      status: "Active"
     });
     setSelectedSurgeries([]);
     setSelectedDiagnoses([]);
     setShowVisitForm(true);
   };
+
+  // Function to handle visit form submission
+  const handleVisitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      // Find the selected doctor's name
+      const selectedDoctor = doctors.find(d => d.dr_id === visitForm.appointmentWith);
+      const doctorName = selectedDoctor ? selectedDoctor.name : visitForm.appointmentWith;
+
+      // Generate a unique visit ID
+      const visitId = `VISIT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      const visitData: Omit<Visit, 'id'> = {
+        visit_id: visitId,
+        patient_unique_id: selectedPatient.unique_id,
+        visit_date: visitForm.visitDate,
+        visit_type: visitForm.visitType,
+        department: visitForm.visitType, // Also save as department for compatibility
+        appointment_with: visitForm.appointmentWith,
+        doctor_name: doctorName, // Add doctor_name field
+        visit_reason: visitForm.visitReason,
+        reason: visitForm.visitReason, // Also save as reason for compatibility
+        referring_doctor: visitForm.referringDoctor,
+        diagnosis: selectedDiagnoses,
+        surgery: selectedSurgeries,
+        claim_id: visitForm.claim_id,
+        relation_with_employee: visitForm.relation_with_employee,
+        status: visitForm.status,
+        created_at: new Date().toISOString()
+      };
+
+      const newVisit = await createVisit(visitData);
+      console.log("Visit registered successfully:", newVisit);
+
+      // Update the patient's last visit date
+      await supabase
+        .from('patients')
+        .update({ last_visit_date: visitForm.visitDate })
+        .eq('id', selectedPatient.id);
+
+      toast({
+        title: "Success",
+        description: "Visit registered successfully"
+      });
+      setShowVisitForm(false);
+    } catch (err) {
+      console.error("Error registering visit:", err);
+      toast({
+        title: "Error",
+        description: err instanceof APIError ? err.message : "An unexpected error occurred while registering the visit",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Function to fetch latest visit for a patient
+  const fetchLatestVisit = async (patientUniqueId: string) => {
+    try {
+      const visits = await getPatientVisits(patientUniqueId);
+      if (visits.length > 0) {
+        setLatestVisit(visits[0]);
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error("Error fetching latest visit:", err.message);
+      } else {
+        console.error("Error fetching latest visit:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (selectedPatient?.unique_id) {
+      fetchLatestVisit(selectedPatient.unique_id);
+    }
+  }, [selectedPatient]);
 
   // Function to handle opening the surgery edit form
   const handleSurgerySelect = (surgery: any) => {
@@ -368,29 +457,6 @@ export function PatientRegistryList() {
     dr_id,
     surgeon_id: selectedSurgeonId
   }));
-
-  useEffect(() => {
-    fetchDoctors();
-    fetchReferringDoctors();
-  }, []);
-
-
-
-  useEffect(() => {
-    async function fetchLatestVisit() {
-      const { data, error } = await supabase
-        .from('visits')
-        .select('*')
-        .eq('patient_unique_id', selectedPatient.unique_id) // or use patient id as needed
-        .order('visit_date', { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0) {
-        setLatestVisit(data[0]);
-      }
-    }
-    if (selectedPatient) fetchLatestVisit();
-  }, [selectedPatient]);
 
   return (
     <div className="overflow-x-auto max-h-[600px]">
@@ -481,46 +547,7 @@ export function PatientRegistryList() {
             <h3 className="text-2xl font-bold mb-1 text-blue-900">Register New Visit</h3>
             <p className="mb-4 text-gray-500">Patient: {selectedPatient.name} ({selectedPatient.id})</p>
 
-            <form onSubmit={async e => {
-              e.preventDefault();
-
-              // Find the selected doctor's name
-              const selectedDoctor = doctors.find(d => d.dr_id === visitForm.appointmentWith);
-              const doctorName = selectedDoctor ? selectedDoctor.name : visitForm.appointmentWith;
-
-              const { data, error } = await supabase.from('visits').insert([{
-                patient_unique_id: selectedPatient.unique_id,
-                visit_date: visitForm.visitDate,
-                visit_type: visitForm.visitType,
-                department: visitForm.visitType, // Also save as department for compatibility
-                appointment_with: visitForm.appointmentWith,
-                doctor_name: doctorName, // Add doctor_name field
-                visit_reason: visitForm.visitReason,
-                reason: visitForm.visitReason, // Also save as reason for compatibility
-                referring_doctor: visitForm.referringDoctor,
-                diagnosis: selectedDiagnoses,
-                surgery: selectedSurgeries,
-                claim_id: visitForm.claim_id,
-                relation_with_employee: visitForm.relation_with_employee,
-                status: visitForm.status
-              }]);
-
-              if (error) {
-                toast({
-                  title: "Error",
-                  description: "Failed to register visit",
-                  variant: "destructive"
-                });
-              } else {
-                toast({
-                  title: "Success",
-                  description: "Visit registered successfully"
-                });
-                setShowVisitForm(false);
-                // Refresh the page to update the IPD dashboard
-                window.location.reload();
-              }
-            }}>
+            <form onSubmit={handleVisitSubmit}>
               <div className="border rounded-xl p-6 mb-4 bg-blue-50/40">
                 <h3 className="font-semibold mb-4 text-blue-800 text-lg bg-blue-100/60 rounded px-2 py-2 shadow-sm">Visit Details</h3>
 

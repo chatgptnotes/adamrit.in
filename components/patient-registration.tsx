@@ -11,11 +11,17 @@ interface PatientRegistrationProps {
 
 export function PatientRegistration({ onClose, onSubmit }: PatientRegistrationProps) {
   const [form, setForm] = useState({
-      name: "",
-      age: "",
+    // Required fields with defaults
+    name: "",
+    age: "",
     gender: "",
-      phone: "",
-      address: "",
+    registration_date: new Date().toISOString().split('T')[0],
+    patient_id: "",
+    unique_id: "",
+    patient_unique_id: "",
+    // Optional fields
+    phone: "",
+    address: "",
     emergency_contact_name: "",
     emergency_contact_mobile: "",
     second_emergency_contact_name: "",
@@ -41,7 +47,7 @@ export function PatientRegistration({ onClose, onSubmit }: PatientRegistrationPr
     relative_phone: "",
     instructions: "",
     identity_type: "",
-      email: "",
+    email: "",
     fax: "",
     privilege_card: "",
     billing_link: "",
@@ -49,7 +55,6 @@ export function PatientRegistration({ onClose, onSubmit }: PatientRegistrationPr
     diagnosis: "",
     surgery: "",
     corporate: "",
-    registration_date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
     insurance_status: "Active",
     referee: "",
     type: "",
@@ -59,8 +64,31 @@ export function PatientRegistration({ onClose, onSubmit }: PatientRegistrationPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      console.log("Form submission started with data:", form);
-      await onSubmit(form);
+      // Validate required fields
+      if (!form.name || !form.age || !form.gender || !form.registration_date) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields (name, age, gender)",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Generate unique IDs if not provided
+      const year = new Date().getFullYear();
+      const randomNum = Math.floor(10000 + Math.random() * 90000); // 5-digit random number
+      const generatedId = `PAT-${year}-${randomNum}`;
+
+      const formData = {
+        ...form,
+        patient_id: form.patient_id || generatedId,
+        unique_id: form.unique_id || generatedId,
+        patient_unique_id: form.patient_unique_id || generatedId,
+        age: parseInt(form.age) || 0
+      };
+
+      console.log("Form submission started with data:", formData);
+      await onSubmit(formData);
       console.log("Form submission completed successfully");
     } catch (error) {
       console.error("Form submission error:", error);

@@ -3,8 +3,10 @@ import { withErrorHandler, APIError } from '@/lib/utils/error-handler';
 
 // Types
 export interface Patient {
-  id?: string;
-  patient_id?: string;
+  id: string;
+  patient_id: string;
+  unique_id: string;
+  patient_unique_id: string;
   name: string;
   age: number;
   gender: string;
@@ -15,6 +17,18 @@ export interface Patient {
   last_visit_date?: string;
   date_of_admission?: string;
   date_of_discharge?: string;
+  corporate?: string;
+  latestVisit?: {
+    visit_id: string;
+    patient_unique_id: string;
+    visit_date: string;
+    visit_type?: string;
+    reason?: string;
+    department?: string;
+    doctor_name?: string;
+    notes?: string;
+    created_at: string;
+  } | null;
 }
 
 // Get all patients
@@ -44,7 +58,20 @@ export async function getPatient(id: string) {
     ).then(({ data, error }) => {
       if (error) throw new APIError(error.message);
       if (!data) throw new APIError('Patient not found');
-      return data;
+
+      // Ensure all required fields are present with defaults
+      const patientWithDefaults = {
+        ...data,
+        patient_id: data.patient_id || data.id,
+        unique_id: data.unique_id || data.id,
+        patient_unique_id: data.patient_unique_id || data.unique_id || data.id,
+        name: data.name || 'Unknown',
+        age: data.age || 0,
+        gender: data.gender || 'Unknown',
+        registration_date: data.registration_date || new Date().toISOString().split('T')[0]
+      };
+
+      return patientWithDefaults;
     })
   );
 }

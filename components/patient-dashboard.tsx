@@ -65,6 +65,7 @@ import {
 } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase/client"; // Make sure this import is correct
 import { TreatmentDates } from './treatment-dates';
+import { getPatientVisits, Visit as VisitData } from '@/lib/supabase/api/visits';
 
 // Mock patient data
 const patientData = {
@@ -1448,7 +1449,9 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
   // Use patient data from props instead of mock data
   const patientData = {
     id: patient.id,
+    patient_id: patient.patient_id,
     unique_id: patient.unique_id,
+    patient_unique_id: patient.patient_unique_id,
     name: patient.name,
     age: patient.age,
     gender: patient.gender,
@@ -1474,28 +1477,48 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
-    }) : 'Not discharged'
+    }) : 'Not discharged',
+    corporate: patient.corporate || ''
   };
 
+  // Initialize visit state with latest visit data if available
   const [visits, setVisits] = useState<Visit[]>([]);
-  const [isVisitFormOpen, setIsVisitFormOpen] = useState(false)
+  const [isVisitFormOpen, setIsVisitFormOpen] = useState(false);
   const [newVisit, setNewVisit] = useState({
-    reason: "",
-    doctor: "",
-    department: "",
-    notes: ""
-  })
-  
+    reason: patient.latestVisit?.reason || "",
+    doctor: patient.latestVisit?.doctor_name || "",
+    department: patient.latestVisit?.department || "",
+    notes: patient.latestVisit?.notes || ""
+  });
+
+  // Fetch visits when component mounts
+  useEffect(() => {
+    async function fetchVisits() {
+      try {
+        const visitData = await getPatientVisits(patient.unique_id);
+        setVisits(visitData);
+      } catch (err) {
+        if (err instanceof Error) {
+          console.error('Error fetching visits:', err.message);
+        } else {
+          console.error('Error fetching visits:', err);
+        }
+      }
+    }
+
+    fetchVisits();
+  }, [patient.unique_id]);
+
   // Patient image state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [patientImage, setPatientImage] = useState<string | null>(null);
   
   // State for diagnoses and selected diagnosis
-  const [diagnosisSearchTerm, setDiagnosisSearchTerm] = useState('')
-  const [isSearchResultsVisible, setIsSearchResultsVisible] = useState(false)
-  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([])
-  const [selectedDiagnosis, setSelectedDiagnosis] = useState<string | null>(null)
-  const [patientDiagnoses, setPatientDiagnoses] = useState<any[]>([]) // For DiagnosisManager data
+  const [diagnosisSearchTerm, setDiagnosisSearchTerm] = useState('');
+  const [isSearchResultsVisible, setIsSearchResultsVisible] = useState(false);
+  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState<string | null>(null);
+  const [patientDiagnoses, setPatientDiagnoses] = useState<any[]>([]); // For DiagnosisManager data
   
   // State for surgeries and selected surgery
   const [surgerySearchTerm, setSurgerySearchTerm] = useState('')
