@@ -733,6 +733,16 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
     });
   };
 
+  // Handler to edit section title
+  const handleEditSectionTitle = (itemIdx: number, newTitle: string) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "section") return item;
+        return { ...item, title: newTitle };
+      });
+    });
+  };
+
   // Handler to delete sub items
   const handleDeleteSubItem = (itemIdx: number, subIdx: number) => {
     setInvoiceItems(prevItems => {
@@ -1014,7 +1024,13 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
               return (
                 <tr key={idx} className="invoice-section">
                   <td colSpan={7}>
-                    <strong>{item.title}</strong>
+                    <input
+                      type="text"
+                      value={item.title}
+                      onChange={(e) => handleEditSectionTitle(idx, e.target.value)}
+                      className="w-full border-none bg-transparent text-sm font-bold p-1"
+                      style={{ minHeight: '20px', backgroundColor: 'transparent', fontWeight: 'bold' }}
+                    />
                     {item.dateRange && <br />}
                     {item.dateRange}
                   </td>
@@ -1033,26 +1049,69 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
                   <React.Fragment key={idx}>
                     <tr style={{ backgroundColor: '#f0f0f0' }}>
                       <td><strong>{item.sr}</strong></td>
-                      <td colSpan={3}><strong>{item.item}</strong></td>
+                      <td colSpan={3}>
+                        <input
+                          type="text"
+                          value={item.item}
+                          onChange={(e) => handleEditMainItem(idx, e.target.value)}
+                          className="w-full border-none bg-transparent text-sm font-bold p-1"
+                          style={{ minHeight: '20px', backgroundColor: 'transparent' }}
+                        />
+                        {item.details && <><br /><span style={{ fontSize: '11px', color: '#555' }}>{item.details}</span></>}
+                      </td>
                       <td>
                         <button
                           onClick={() => handleAddRow(idx, sectionType)}
-                          className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
+                          className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition-colors"
                           style={{ fontSize: '10px' }}
+                          title="Add new row to this section"
                         >
-                          + Add Row
+                          + Add More
                         </button>
                       </td>
                       <td></td>
                       <td>
+                        <div className="flex items-center justify-center gap-1">
+                          {/* Move Up Button */}
+                          <button
+                            onClick={() => handleMoveMainItemUp(idx)}
+                            disabled={idx === 0}
+                            className={`px-1 py-1 rounded transition-colors flex items-center justify-center ${
+                              idx === 0 
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                            }`}
+                            style={{ fontSize: '10px' }}
+                            title="Move section up"
+                          >
+                            <ChevronUp className="h-3 w-3" />
+                          </button>
+                          
+                          {/* Move Down Button */}
+                          <button
+                            onClick={() => handleMoveMainItemDown(idx)}
+                            disabled={idx === invoiceItems.length - 1}
+                            className={`px-1 py-1 rounded transition-colors flex items-center justify-center ${
+                              idx === invoiceItems.length - 1
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                            }`}
+                            style={{ fontSize: '10px' }}
+                            title="Move section down"
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </button>
+                          
+                          {/* Delete Button */}
                         <button
                           onClick={() => handleDeleteMainItem(idx)}
-                          className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors flex items-center justify-center"
+                            className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
                           style={{ fontSize: '10px' }}
                           title="Delete section"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
+                        </div>
                       </td>
                     </tr>
                     {item.subItems.map((sub: any, subIdx: number) => (
@@ -1190,7 +1249,7 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
                           <strong>{(sub.pricing ? sub.pricing.finalAmount : sub.amount)?.toFixed(2)}</strong>
                         </td>
                         <td className="center-align">
-                          <div className="flex items-center justify-center gap-1">
+                          <div className="flex items-center justify-center gap-1 flex-wrap">
                             {/* Move Up Button */}
                             <button
                               onClick={() => handleMoveSubItemUp(idx, subIdx)}
