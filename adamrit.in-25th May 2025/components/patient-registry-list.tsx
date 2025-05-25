@@ -103,6 +103,9 @@ export function PatientRegistryList() {
         ...patientData,
         // Convert age to number if it's a string
         age: patientData.age ? parseInt(patientData.age) : null,
+        // Fix date fields - convert empty strings to null
+        dob: patientData.dob && patientData.dob.trim() !== '' ? patientData.dob : null,
+        registration_date: patientData.registration_date && patientData.registration_date.trim() !== '' ? patientData.registration_date : new Date().toISOString().split('T')[0],
         // Ensure boolean fields are properly set
         temp_reg: patientData.temp_reg || false,
         consultant_own: patientData.consultant_own || false,
