@@ -778,7 +778,7 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
       {/* Diagnoses Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base font-medium text-blue-700 tracking-tight mb-1">
             <Stethoscope className="h-5 w-5 text-blue-600" />
             Diagnoses Management
           </CardTitle>
@@ -950,7 +950,7 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
       {/* Surgeries Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base font-medium text-blue-700 tracking-tight mb-1">
             <Package className="h-5 w-5 text-green-600" />
             Treatment Surgeries
           </CardTitle>
@@ -1040,7 +1040,7 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
       {/* Complications Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base font-medium text-blue-700 tracking-tight mb-1">
             <AlertTriangle className="h-5 w-5 text-orange-600" />
             Complications Management
           </CardTitle>

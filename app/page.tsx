@@ -34,7 +34,8 @@ import {
   ActivitySquare,
   PlusCircle,
   Pencil,
-  Trash2
+  Trash2,
+  RefreshCw
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -237,6 +238,9 @@ export default function Home() {
 
   const [privateSurgeries, setPrivateSurgeries] = useState<PrivateSurgery[]>([])
   const [editPrivateSurgery, setEditPrivateSurgery] = useState<PrivateSurgery | null>(null)
+
+  const [updates, setUpdates] = useState<any[]>([]);
+  const [loadingUpdates, setLoadingUpdates] = useState(false);
 
   // Add useEffect to handle initial state
   useEffect(() => {
@@ -823,6 +827,25 @@ export default function Home() {
     }
   };
 
+  // Fetch latest updates from GitHub
+  const fetchLatestUpdates = async () => {
+    setLoadingUpdates(true);
+    try {
+      const res = await fetch("https://api.github.com/repos/chatgptnotes/adamrit.in/commits?per_page=5");
+      const data = await res.json();
+      setUpdates(data);
+    } catch (err) {
+      setUpdates([]);
+    } finally {
+      setLoadingUpdates(false);
+    }
+  };
+
+  // Optionally, fetch on mount
+  useEffect(() => {
+    fetchLatestUpdates();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="border-b bg-white shadow-sm sticky top-0 z-50">
@@ -1126,72 +1149,45 @@ export default function Home() {
                 <h2 className="text-2xl font-semibold mb-4 text-blue-800 flex items-center gap-2">
                   <ActivitySquare className="h-6 w-6" />
                   Recent Updates & New Features
+                  <button
+                    onClick={fetchLatestUpdates}
+                    className="ml-2 p-2 rounded-full bg-white border border-blue-200 hover:bg-blue-100 transition flex items-center justify-center"
+                    title="Refresh updates"
+                    aria-label="Refresh updates"
+                    disabled={loadingUpdates}
+                    style={{ minWidth: 36, minHeight: 36 }}
+                  >
+                    {loadingUpdates ? (
+                      <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                      </svg>
+                    ) : (
+                      <RefreshCw className="h-5 w-5 text-blue-600" />
+                    )}
+                  </button>
                 </h2>
                 <div className="space-y-4">
-                  <div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-green-100 rounded-full p-2 mt-1">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  {updates && updates.length > 0 ? (
+                    updates.map((commit, idx) => (
+                      <div key={commit.sha} className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
+                        <div className="flex items-start gap-3">
+                          <div className="bg-green-100 rounded-full p-2 mt-1">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-800">{commit.commit.message.split("\n")[0]}</h3>
+                            <p className="text-xs text-gray-500 mt-1">By {commit.commit.author.name} on {new Date(commit.commit.author.date).toLocaleDateString()}</p>
+                            <a href={commit.html_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">View Commit</a>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800">Independent Scrolling for Patient Details</h3>
-                        <p className="text-sm text-gray-600 mt-1">Patient Details section now scrolls independently from the Final Bill section for better navigation</p>
-                        <p className="text-xs text-gray-500 mt-1">Updated: Today</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-green-100 rounded-full p-2 mt-1">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800">Edit & Delete Billing History</h3>
-                        <p className="text-sm text-gray-600 mt-1">Added edit and delete buttons to each billing history card for easier management</p>
-                        <p className="text-xs text-gray-500 mt-1">Updated: Today</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-green-100 rounded-full p-2 mt-1">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800">Compact Print Button</h3>
-                        <p className="text-sm text-gray-600 mt-1">Print button is now a small circular icon for cleaner interface</p>
-                        <p className="text-xs text-gray-500 mt-1">Updated: Today</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-blue-100 rounded-full p-2 mt-1">
-                        <ClipboardList className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800">Billing Tables Setup</h3>
-                        <p className="text-sm text-gray-600 mt-1">New billing database structure for storing patient invoices and billing details</p>
-                        <p className="text-xs text-gray-500 mt-1">Updated: Yesterday</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-blue-100 rounded-full p-2 mt-1">
-                        <Users className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-800">Dynamic Visit Type Display</h3>
-                        <p className="text-sm text-gray-600 mt-1">Patient profiles now show IPD/OPD visit types with admission details</p>
-                        <p className="text-xs text-gray-500 mt-1">Updated: 2 days ago</p>
-                      </div>
-                    </div>
-                  </div>
+                    ))
+                  ) : loadingUpdates ? (
+                    <div className="text-center text-blue-600">Loading updates...</div>
+                  ) : (
+                    <div className="text-center text-gray-500">No recent updates found.</div>
+                  )}
                 </div>
               </div>
               
@@ -1340,8 +1336,6 @@ export default function Home() {
             )}
             {editDiagnosis && (
               <AddDiagnosisForm
-                key={editDiagnosis.id}
-                initialData={editDiagnosis as any}
                 onCancel={() => setEditDiagnosis(null)}
                 onSubmit={(name: string, formData: Partial<Diagnosis> | undefined) => handleEditDiagnosis(editDiagnosis.id, name, formData)}
               />
@@ -2075,10 +2069,8 @@ export default function Home() {
               {showAddOtherInvestigation && (
                 <AddOtherInvestigationForm
                   onCancel={() => setShowAddOtherInvestigation(false)}
-                  onSubmit={data => {
-                    setOtherInvestigations([...otherInvestigations, data]);
-                    setShowAddOtherInvestigation(false);
-                    window.alert("Other Investigation Added Successfully!");
+                  onSubmit={async data => {
+                    await handleAddOtherInvestigation(data);
                   }}
                 />
               )}

@@ -163,9 +163,10 @@ export function MedicationsList({ complicationIds, day }: MedicationsListProps) 
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold text-lg">Medications</h2>
-        <button className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">Request New Medication</button>
+      <div className="flex items-center justify-end mb-4">
+        <button className="bg-blue-600 text-white px-2.5 py-1 rounded text-xs font-medium hover:bg-blue-700 transition border border-blue-600" style={{minHeight: '22px', minWidth: '48px', padding: '0 8px'}}>
+          Add Med
+        </button>
       </div>
       {day && (
         <div className="mb-2 text-xs text-blue-600 font-semibold">Showing medications for <span className="bg-blue-50 px-2 py-1 rounded-full">{day}</span></div>
