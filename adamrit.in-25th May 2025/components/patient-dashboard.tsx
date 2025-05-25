@@ -246,19 +246,16 @@ const printStyles = `
   }
 `;
 
-function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, visits, patientData }: {
-  patientId: string,
+function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, visits }: {
+  patientData: Patient,
   diagnoses: Diagnosis[],
   conservativeStart: string,
   conservativeEnd: string,
   surgicalStart: string,
   surgicalEnd: string,
-  visits: Visit[],
-  patientData: any
+  visits: Visit[]
 }) {
-  // State for patient and visit data
-  const [patientUniqueId, setPatientUniqueId] = useState<string>('');
-  const [allVisits, setAllVisits] = useState<Visit[]>([]);
+  // State for invoice data
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
 
@@ -289,18 +286,17 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
           setDoctors(doctorsData || []);
         }
       } catch (err) {
-        console.error("Error fetching doctors:", err);
+        console.error("Error in fetchDoctors:", err);
       }
     }
 
     fetchDoctors();
-    setAllVisits(visits);
-  }, [visits]);
+  }, []);
 
   // Initialize comprehensive invoice items
   useEffect(() => {
-    if (patientData && allVisits.length > 0) {
-      const latestVisit = allVisits[0];
+    if (patientData && visits.length > 0) {
+      const latestVisit = visits[0];
       const items = [
         // Conservative Treatment Section
         { 
@@ -460,9 +456,9 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
       
       setInvoiceItems(items);
     }
-  }, [patientData, allVisits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd]);
+  }, [patientData, visits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd]);
 
-  const latestVisit = allVisits[0] || visits[0];
+  const latestVisit = visits[0];
 
   if (!patientData || !latestVisit) {
     return <div className="p-4">Loading invoice...</div>;
@@ -873,7 +869,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
       <div className="flex justify-between patient-info" style={{ marginTop: '8px', marginBottom: '8px' }}>
         <div style={{ width: '48%' }}>
           <div><strong>BILL NO</strong>: {formatBillNumber(latestVisit.visit_id)}</div>
-          <div><strong>REGISTRATION NO</strong>: {patientData.unique_id}</div>
+          <div><strong>REGISTRATION NO</strong>: {patientData.unique_id || 'IH24D04003'}</div>
           <div><strong>NAME OF PATIENT</strong>: {patientData.name.toUpperCase()}</div>
           <div><strong>AGE</strong>: {patientData.age} YEARS</div>
           <div><strong>SEX</strong>: {patientData.gender.toUpperCase()}</div>
@@ -889,8 +885,8 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
           <div style={{ margin: '8px 0' }}>
             URETHRAL STRICTURE WITH CYSTITIS WITH UTI WITH SEPSIS. KNOWN CASE OF PTH HTN CHRONIC OESOPHAGEAL STRICTURE.
           </div>
-          <div><strong>DATE OF ADMISSION</strong>: {patientData.date_of_admission ? formatDateForDisplay(patientData.date_of_admission) : formatDateForDisplay(conservativeStart)}</div>
-          <div><strong>DATE OF DISCHARGE</strong>: {patientData.date_of_discharge ? formatDateForDisplay(patientData.date_of_discharge) : formatDateForDisplay(conservativeEnd)}</div>
+          <div><strong>DATE OF ADMISSION</strong>: {formatDateForDisplay(conservativeStart)}</div>
+          <div><strong>DATE OF DISCHARGE</strong>: {formatDateForDisplay(conservativeEnd)}</div>
         </div>
       </div>
 
@@ -2481,14 +2477,13 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
               </div>
             </div>
             <InvoicePage 
-              patientId={patientData.id} 
+              patientData={patient} 
               diagnoses={diagnoses} 
               conservativeStart={conservativeStart} 
               conservativeEnd={conservativeEnd}
               surgicalStart={surgicalStart} 
               surgicalEnd={surgicalEnd}
               visits={visits}
-              patientData={patientData}
             />
           </div>
         </div>
