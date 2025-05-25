@@ -905,7 +905,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
       <div className="flex justify-between patient-info" style={{ marginTop: '8px', marginBottom: '8px' }}>
         <div style={{ width: '48%' }}>
           <div><strong>BILL NO</strong>: {formatBillNumber(latestVisit.visit_id)}</div>
-          <div><strong>REGISTRATION NO</strong>: {patientData.unique_id || 'IH24D04003'}</div>
+          <div><strong>REGISTRATION NO</strong>: {patientData.unique_id}</div>
           <div><strong>NAME OF PATIENT</strong>: {patientData.name.toUpperCase()}</div>
           <div><strong>AGE</strong>: {patientData.age} YEARS</div>
           <div><strong>SEX</strong>: {patientData.gender.toUpperCase()}</div>
@@ -921,8 +921,8 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
           <div style={{ margin: '8px 0' }}>
             URETHRAL STRICTURE WITH CYSTITIS WITH UTI WITH SEPSIS. KNOWN CASE OF PTH HTN CHRONIC OESOPHAGEAL STRICTURE.
           </div>
-          <div><strong>DATE OF ADMISSION</strong>: {formatDateForDisplay(conservativeStart)}</div>
-          <div><strong>DATE OF DISCHARGE</strong>: {formatDateForDisplay(conservativeEnd)}</div>
+          <div><strong>DATE OF ADMISSION</strong>: {patientData.date_of_admission ? formatDateForDisplay(patientData.date_of_admission) : formatDateForDisplay(conservativeStart)}</div>
+          <div><strong>DATE OF DISCHARGE</strong>: {patientData.date_of_discharge ? formatDateForDisplay(patientData.date_of_discharge) : formatDateForDisplay(conservativeEnd)}</div>
         </div>
       </div>
 
