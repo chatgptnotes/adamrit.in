@@ -146,7 +146,7 @@ interface Medication {
 
 export default function Home() {
   const searchParams = useSearchParams();
-  const tabFromUrl = searchParams.get("tab") as
+  const tabFromUrl = searchParams?.get("tab") as
     | "patient"
     | "patient-dashboard"
     | "diagnosis-master"
@@ -166,7 +166,8 @@ export default function Home() {
     | "user-list"
     | "today-ipd-dashboard"
     | "today-opd-dashboard"
-    | "patient-registration";
+    | "patient-registration"
+    | null;
   const activeTab = tabFromUrl || "patient";
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -462,14 +463,14 @@ export default function Home() {
         setSearchResults([]);
       }
     }, 300),
-    [setSearchResults, setIsSearching]
+    []
   );
 
   const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchValue(value);
     debouncedSearch(value);
-  }, [setSearchValue, debouncedSearch]);
+  }, [debouncedSearch]);
 
   // Handler to add diagnosis
   const handleAddDiagnosis = async (name: string, formData: Partial<Diagnosis> | undefined) => {

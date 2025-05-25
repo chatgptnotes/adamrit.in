@@ -64,6 +64,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase/client"; // Make sure this import is correct
+import { TreatmentDates } from './treatment-dates';
 
 // Mock patient data
 const patientData = {
@@ -108,10 +109,16 @@ const visitHistoryData = [
   },
 ];
 
-// Add this at the top of the file (after imports):
-export const doctorMasterList = [
-  { id: 'dr1', name: 'Dr. Dhiraj Gupta MS. (Ortho)' },
-  { id: 'dr2', name: 'Dr. Ashwin Chinchkhede (MD. Med.)' },
+// Update the doctorMasterList interface
+interface Doctor {
+  id: string;
+  name: string;
+  specialization?: string;
+}
+
+export const doctorMasterList: Doctor[] = [
+  { id: 'dr1', name: 'Dr. Dhiraj Gupta MS. (Ortho)', specialization: 'Orthopedics' },
+  { id: 'dr2', name: 'Dr. Ashwin Chinchkhede', specialization: 'MD. Med.' },
   // Add more doctors here as needed
 ];
 
@@ -246,60 +253,44 @@ const printStyles = `
   }
 `;
 
-function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd }: {
+// Add these helper functions before the InvoicePage component
+const formatClaimId = () => {
+  // Generate a claim ID in the format CLAIM-YYYY-XXXX
+  const year = new Date().getFullYear();
+  const random = Math.floor(1000 + Math.random() * 9000);
+  return `CLAIM-${year}-${random}`;
+};
+
+const formatBillNumber = (visitId: string) => {
+  // Format bill number as BL24D-16/04
+  const date = new Date();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `BL24D-${day}/${month}`;
+};
+
+function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, conservativeStart2, conservativeEnd2, visits }: {
   patientData: Patient,
   diagnoses: Diagnosis[],
-  visits: Visit[],
-  conservativeStart?: string | null,
-  conservativeEnd?: string | null,
-  surgicalStart?: string | null,
-  surgicalEnd?: string | null
+  conservativeStart: string,
+  conservativeEnd: string,
+  surgicalStart: string,
+  surgicalEnd: string,
+  conservativeStart2: string,
+  conservativeEnd2: string,
+  visits: Visit[]
 }) {
+  // State for invoice data
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
-  const [doctors, setDoctors] = useState<any[]>([]);
-
-  // Format visit_id to bill number format
-  const formatBillNumber = (visitId: string) => {
-    const number = visitId.split('-')[1] || '04003';
-    return `BL24D-16/04`;
-  };
-
-  // Format claim ID
-  const formatClaimId = () => {
-    return '29935890';
-  };
-
-  // Fetch doctors data
-  useEffect(() => {
-    async function fetchDoctors() {
-      try {
-        const { data: doctorsData, error: doctorsError } = await supabase
-          .from('doctors')
-          .select('*')
-          .order('name');
-
-        if (doctorsError) {
-          console.error("Error fetching doctors:", doctorsError);
-        } else {
-          console.log("✅ Successfully fetched doctors:", doctorsData);
-          setDoctors(doctorsData || []);
-        }
-      } catch (err) {
-        console.error("Error in fetchDoctors:", err);
-      }
-    }
-
-    fetchDoctors();
-  }, []);
 
   // Initialize comprehensive invoice items
   useEffect(() => {
     if (patientData) {
       const items = [
-        // Conservative Treatment Section
+        // Pre-Surgical Conservative Treatment Section
         { 
           type: "section", 
-          title: "Conservative Treatment", 
+          title: "Pre-Surgical Conservative Treatment", 
           dateRange: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`
         },
         
@@ -309,12 +300,19 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
           title: "Surgical Package (5 Days)", 
           dateRange: `Dt. (${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`
         },
+
+        // Post-Surgical Conservative Treatment Section
+        { 
+          type: "section", 
+          title: "Post-Surgical Conservative Treatment", 
+          dateRange: `Dt.(${conservativeStart2?.split('-').reverse().join('/')} TO ${conservativeEnd2?.split('-').reverse().join('/')})`
+        },
         
-        // 1) Consultation for Inpatients
+        // 1) Consultation for Inpatients (Pre-Surgical)
         {
           type: "main",
           sr: "1)",
-          item: "Consultation for Inpatients",
+          item: "Pre-Surgical Consultation for Inpatients",
           code: "2",
           subItems: [
             {
@@ -336,11 +334,11 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
           ]
         },
         
-        // 2) Accommodation Charges
+        // 2) Pre-Surgical Accommodation Charges
         {
           type: "main",
           sr: "2)",
-          item: "Accommodation Charges",
+          item: "Pre-Surgical Accommodation Charges",
           subItems: [
             {
               sr: "i)",
@@ -352,101 +350,72 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
             }
           ]
         },
-        
-        // 3) Pathology Charges
+
+        // 3) Surgical Package Charges
         {
           type: "main",
           sr: "3)",
-          item: "Pathology Charges",
-          details: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`,
-          note: "Note:Attached Pathology Break-up",
-          rate: 3545.00,
-          qty: 1,
-          amount: 3545.00
-        },
-        
-        // 4) Medicine Charges
-        {
-          type: "main",
-          sr: "4)",
-          item: "Medicine Charges",
-          details: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`,
-          note: "Note:Attached Pharmacy Statement with Bills",
-          rate: 9343.00,
-          qty: 1,
-          amount: 9343.00
-        },
-        
-        // 5) OTHER CHARGES
-        {
-          type: "main",
-          sr: "5)",
-          item: "OTHER CHARGES",
-          subItems: [
-            { sr: "i)", item: "ECG", code: "590", rate: 175.00, qty: 1, amount: 175.00 },
-            { sr: "ii)", item: "Chest PA view", code: "1608", rate: 230.00, qty: 1, amount: 230.00 },
-            { sr: "iii)", item: "Voiding-cysto-urethrogram and retrograde urethrogram(Nephrostogram)", code: "894", rate: 476.00, qty: 1, amount: 476.00 },
-            { sr: "iv)", item: "Abdomen USG", code: "1591", rate: 800.00, qty: 1, amount: 800.00 },
-            { sr: "v)", item: "Pelvic USG", code: "1592", rate: 500.00, qty: 1, amount: 500.00 },
-            { sr: "vi)", item: "2D echocardiography", code: "592", rate: 1475.00, qty: 1, amount: 1475.00 }
-          ]
-        },
-        
-        // 7) Surgical Treatment
-        {
-          type: "main",
-          sr: "7)",
-          item: `Surgical Treatment (${surgicalStart?.split('-').reverse().join('/')})`,
+          item: "Surgical Package Charges",
+          details: `Dt.(${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`,
           subItems: [
             {
               sr: "i)",
-              item: "Resection Bladder Neck Endoscopic /Bladder neckincision/transurethral incision on prostrate",
-              code: "874",
-              pricing: {
-                baseAmount: 11308,
-                primaryAdjustment: "ward10",
-                discountAmount: 1130,
-                finalAmount: 10178.00
-              }
+              item: "Surgery Charges",
+              details: `Dt.(${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`,
+              rate: 25000.00,
+              qty: 1,
+              amount: 25000.00
             },
             {
               sr: "ii)",
-              item: "Suprapubic Drainage (Cystostomy/vesicostomy)",
-              code: "750",
-              pricing: {
-                baseAmount: 6900,
-                primaryAdjustment: "ward10",
-                secondaryAdjustment: "guideline50",
-                discountAmount: 690,
-                subDiscountAmount: 6210,
-                finalAmount: 3105.00
-              }
+              item: "OT Charges",
+              details: `Dt.(${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`,
+              rate: 15000.00,
+              qty: 1,
+              amount: 15000.00
+            }
+          ]
+        },
+
+        // 4) Post-Surgical Consultation
+        {
+          type: "main",
+          sr: "4)",
+          item: "Post-Surgical Consultation for Inpatients",
+          code: "2",
+          subItems: [
+            {
+              sr: "i)",
+              item: "Dr. Pranal Sahare,(Urologist)",
+              details: `Dt.(${conservativeStart2?.split('-').reverse().join('/')} TO ${conservativeEnd2?.split('-').reverse().join('/')})`,
+              rate: 350.00,
+              qty: 6,
+              amount: 2100.00
             },
             {
-              sr: "iii)",
-              item: "Diagnostic cystoscopy",
-              code: "694",
-              pricing: {
-                baseAmount: 3306,
-                primaryAdjustment: "ward10",
-                secondaryAdjustment: "guideline50",
-                discountAmount: 330,
-                subDiscountAmount: 2976,
-                finalAmount: 1488.00
-              }
-            },
+              sr: "ii)",
+              item: "Dr. Ashwin Chichkhede, MD (Medicine)",
+              details: `Dt.(${conservativeStart2?.split('-').reverse().join('/')} TO ${conservativeEnd2?.split('-').reverse().join('/')})`,
+              rate: 350.00,
+              qty: 6,
+              amount: 2100.00
+            }
+          ]
+        },
+
+        // 5) Post-Surgical Accommodation
+        {
+          type: "main",
+          sr: "5)",
+          item: "Post-Surgical Accommodation Charges",
+          subItems: [
             {
-              sr: "iv)",
-              item: "Meatotomy",
-              code: "780",
-              pricing: {
-                baseAmount: 2698,
-                primaryAdjustment: "ward10",
-                secondaryAdjustment: "guideline50",
-                discountAmount: 269,
-                subDiscountAmount: 2429,
-                finalAmount: 1214.00
-              }
+              sr: "i)",
+              item: "Accommodation For General Ward",
+              details: `Dt.(${conservativeStart2?.split('-').reverse().join('/')} TO ${conservativeEnd2?.split('-').reverse().join('/')})`,
+              rate: 1500.00,
+              qty: 6,
+              amount: 9000.00
             }
           ]
         }
@@ -454,7 +423,7 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
       
       setInvoiceItems(items);
     }
-  }, [patientData, visits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd]);
+  }, [patientData, visits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, conservativeStart2, conservativeEnd2]);
 
   const latestVisit = visits[0];
 
@@ -629,8 +598,8 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
   ];
 
   // List of available consultants - now dynamic from database
-  const consultantOptions = doctors.map(doctor => ({
-    value: doctor.dr_id,
+  const consultantOptions = doctorMasterList.map(doctor => ({
+    value: doctor.id,
     label: `${doctor.name}${doctor.specialization ? ` (${doctor.specialization})` : ''}`
   }));
 
@@ -657,6 +626,54 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
   const handleDeleteMainItem = (itemIdx: number) => {
     setInvoiceItems(prevItems => {
       return prevItems.filter((_, idx) => idx !== itemIdx);
+    });
+  };
+
+  // Handler to move main item up
+  const handleMoveMainItemUp = (itemIdx: number) => {
+    setInvoiceItems(prevItems => {
+      if (itemIdx === 0) return prevItems; // Can't move first item up
+      
+      const newItems = [...prevItems];
+      const temp = newItems[itemIdx];
+      newItems[itemIdx] = newItems[itemIdx - 1];
+      newItems[itemIdx - 1] = temp;
+      
+      return newItems;
+    });
+  };
+
+  // Handler to move main item down
+  const handleMoveMainItemDown = (itemIdx: number) => {
+    setInvoiceItems(prevItems => {
+      if (itemIdx === prevItems.length - 1) return prevItems; // Can't move last item down
+      
+      const newItems = [...prevItems];
+      const temp = newItems[itemIdx];
+      newItems[itemIdx] = newItems[itemIdx + 1];
+      newItems[itemIdx + 1] = temp;
+      
+      return newItems;
+    });
+  };
+
+  // Handler to edit main item
+  const handleEditMainItem = (itemIdx: number, newName: string) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "main") return item;
+        return { ...item, item: newName };
+      });
+    });
+  };
+
+  // Handler to edit section title
+  const handleEditSectionTitle = (itemIdx: number, newTitle: string) => {
+    setInvoiceItems(prevItems => {
+      return prevItems.map((item, idx) => {
+        if (idx !== itemIdx || item.type !== "section") return item;
+        return { ...item, title: newTitle };
+      });
     });
   };
 
@@ -902,9 +919,21 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
           <div style={{ textAlign: 'right' }}><strong>DATE:-</strong> {formatDateForDisplay(new Date().toISOString())}</div>
           <div style={{ marginTop: '20px' }}><strong>DIAGNOSIS</strong>:</div>
           <div style={{ margin: '8px 0' }}>
-            {patientData.latestVisit?.reason || 'No diagnosis recorded'}
+            <textarea
+              placeholder="Enter diagnosis here..."
+              className="w-full border border-gray-300 rounded p-2 text-sm resize-none"
+              style={{ 
+                minHeight: '60px', 
+                fontSize: '12px',
+                fontFamily: 'Arial, sans-serif',
+                backgroundColor: 'white'
+              }}
+              defaultValue={diagnoses && diagnoses.length > 0 
+                ? diagnoses.map(d => d.name).join(', ')
+                : (patientData.latestVisit?.reason || '')}
+            />
           </div>
-          <div><strong>DATE OF ADMISSION</strong>: {patientData.date_of_admission ? formatDateForDisplay(patientData.date_of_admission) : 'Not admitted'}</div>
+          <div><strong>DATE OF ADMISSION</strong>: {patientData.latestVisit?.visit_date ? formatDateForDisplay(patientData.latestVisit.visit_date) : 'Not admitted'}</div>
           <div><strong>DATE OF DISCHARGE</strong>: {patientData.date_of_discharge ? formatDateForDisplay(patientData.date_of_discharge) : 'Not discharged'}</div>
         </div>
       </div>
@@ -928,7 +957,13 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
               return (
                 <tr key={idx} className="invoice-section">
                   <td colSpan={7}>
-                    <strong>{item.title}</strong>
+                    <input
+                      type="text"
+                      value={item.title}
+                      onChange={(e) => handleEditSectionTitle(idx, e.target.value)}
+                      className="w-full border-none bg-transparent text-sm font-bold p-1"
+                      style={{ minHeight: '20px', backgroundColor: 'transparent', fontWeight: 'bold' }}
+                    />
                     {item.dateRange && <br />}
                     {item.dateRange}
                   </td>
@@ -947,26 +982,69 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
                   <React.Fragment key={idx}>
                     <tr style={{ backgroundColor: '#f0f0f0' }}>
                       <td><strong>{item.sr}</strong></td>
-                      <td colSpan={3}><strong>{item.item}</strong></td>
+                      <td colSpan={3}>
+                        <input
+                          type="text"
+                          value={item.item}
+                          onChange={(e) => handleEditMainItem(idx, e.target.value)}
+                          className="w-full border-none bg-transparent text-sm font-bold p-1"
+                          style={{ minHeight: '20px', backgroundColor: 'transparent' }}
+                        />
+                        {item.details && <><br /><span style={{ fontSize: '11px', color: '#555' }}>{item.details}</span></>}
+                      </td>
                       <td>
                         <button
                           onClick={() => handleAddRow(idx, sectionType)}
-                          className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
+                          className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition-colors"
                           style={{ fontSize: '10px' }}
+                          title="Add new row to this section"
                         >
-                          + Add Row
+                          + Add More
                         </button>
                       </td>
                       <td></td>
                       <td>
+                        <div className="flex items-center justify-center gap-1">
+                          {/* Move Up Button */}
+                          <button
+                            onClick={() => handleMoveMainItemUp(idx)}
+                            disabled={idx === 0}
+                            className={`px-1 py-1 rounded transition-colors flex items-center justify-center ${
+                              idx === 0 
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                            }`}
+                            style={{ fontSize: '10px' }}
+                            title="Move section up"
+                          >
+                            <ChevronUp className="h-3 w-3" />
+                          </button>
+                          
+                          {/* Move Down Button */}
+                          <button
+                            onClick={() => handleMoveMainItemDown(idx)}
+                            disabled={idx === invoiceItems.length - 1}
+                            className={`px-1 py-1 rounded transition-colors flex items-center justify-center ${
+                              idx === invoiceItems.length - 1
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                            }`}
+                            style={{ fontSize: '10px' }}
+                            title="Move section down"
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </button>
+                          
+                          {/* Delete Button */}
                         <button
                           onClick={() => handleDeleteMainItem(idx)}
-                          className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors flex items-center justify-center"
+                            className="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
                           style={{ fontSize: '10px' }}
                           title="Delete section"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
+                        </div>
                       </td>
                     </tr>
                     {item.subItems.map((sub: any, subIdx: number) => (
@@ -1104,7 +1182,7 @@ function InvoicePage({ patientData, diagnoses, visits, conservativeStart, conser
                           <strong>{(sub.pricing ? sub.pricing.finalAmount : sub.amount)?.toFixed(2)}</strong>
                         </td>
                         <td className="center-align">
-                          <div className="flex items-center justify-center gap-1">
+                          <div className="flex items-center justify-center gap-1 flex-wrap">
                             {/* Move Up Button */}
                             <button
                               onClick={() => handleMoveSubItemUp(idx, subIdx)}
@@ -1360,6 +1438,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
   const [isSearchResultsVisible, setIsSearchResultsVisible] = useState(false)
   const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([])
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<string | null>(null)
+  const [patientDiagnoses, setPatientDiagnoses] = useState<any[]>([]) // For DiagnosisManager data
   
   // State for surgeries and selected surgery
   const [surgerySearchTerm, setSurgerySearchTerm] = useState('')
@@ -1416,7 +1495,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
 
   const router = useRouter();
   const params = useParams();
-  const patientId = params.id; // or whatever your param is called
+  const patientId = params?.id; // or whatever your param is called
 
   // Navigate to settings page
   const goToSettings = () => {
@@ -1779,6 +1858,12 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
     setHasUnsavedChanges(true);
   };
 
+  // Handle diagnoses changes from DiagnosisManager
+  const handleDiagnosesChange = (newDiagnoses: any[]) => {
+    setPatientDiagnoses(newDiagnoses);
+    setHasUnsavedChanges(true);
+  };
+
   // Add resize event handlers
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -2019,6 +2104,29 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
     }
   }, [patientData, visits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd]);
 
+  const handleDateChange = (field: string, value: string) => {
+    switch (field) {
+      case 'conservativeStart':
+        setConservativeStart(value);
+        break;
+      case 'conservativeEnd':
+        setConservativeEnd(value);
+        break;
+      case 'surgicalStart':
+        setSurgicalStart(value);
+        break;
+      case 'surgicalEnd':
+        setSurgicalEnd(value);
+        break;
+      case 'conservativeStart2':
+        setConservativeStart2(value);
+        break;
+      case 'conservativeEnd2':
+        setConservativeEnd2(value);
+        break;
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-gray-900" style={{ fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       {/* Resizable Secondary Sidebar */}
@@ -2102,6 +2210,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                     <DiagnosisManager 
                       patientUniqueId={patient?.unique_id || ''} 
                       visitId={visits[0]?.visit_id || undefined}
+                      onDiagnosesChange={handleDiagnosesChange}
                     />
                   </TabsContent>
                   
@@ -2520,39 +2629,24 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
           </div>
           {/* Invoice Page to the right */}
           <div className="md:col-span-8 space-y-6">
-            <div className="flex flex-col md:flex-row gap-2 mb-3 p-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-blue-100/50">
-              <div className="flex-1">
-                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Conservative Start</label>
-                <input type="date" value={conservativeStart} onChange={e => setConservativeStart(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
-              </div>
-              <div className="flex-1">
-                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Conservative End</label>
-                <input type="date" value={conservativeEnd} onChange={e => setConservativeEnd(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
-              </div>
-              <div className="flex-1">
-                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Surgical Start</label>
-                <input type="date" value={surgicalStart} onChange={e => setSurgicalStart(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
-              </div>
-              <div className="flex-1">
-                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Surgical End</label>
-                <input type="date" value={surgicalEnd} onChange={e => setSurgicalEnd(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
-              </div>
-              <div className="flex-1">
-                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Conservative Start</label>
-                <input type="date" value={conservativeStart2} onChange={e => setConservativeStart2(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
-              </div>
-              <div className="flex-1">
-                <label className="block text-[10px] font-medium mb-0.5 text-gray-700 tracking-wide">Conservative End</label>
-                <input type="date" value={conservativeEnd2} onChange={e => setConservativeEnd2(e.target.value)} className="border border-blue-200/60 rounded-lg px-2 py-1.5 bg-white/90 focus:border-blue-400 focus:ring-1 focus:ring-blue-200/50 transition-all duration-300 text-[10px] font-medium w-full" />
-              </div>
-            </div>
+            <TreatmentDates
+              conservativeStart={conservativeStart}
+              conservativeEnd={conservativeEnd}
+              surgicalStart={surgicalStart}
+              surgicalEnd={surgicalEnd}
+              conservativeStart2={conservativeStart2}
+              conservativeEnd2={conservativeEnd2}
+              onDateChange={handleDateChange}
+            />
             <InvoicePage 
               patientData={patient} 
-              diagnoses={diagnoses} 
-              conservativeStart={conservativeStart} 
+              diagnoses={diagnoses}
+              conservativeStart={conservativeStart}
               conservativeEnd={conservativeEnd}
-              surgicalStart={surgicalStart} 
+              surgicalStart={surgicalStart}
               surgicalEnd={surgicalEnd}
+              conservativeStart2={conservativeStart2}
+              conservativeEnd2={conservativeEnd2}
               visits={visits}
             />
           </div>
