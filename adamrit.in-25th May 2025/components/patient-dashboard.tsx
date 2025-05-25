@@ -460,9 +460,27 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
 
   const latestVisit = visits[0];
 
-  if (!patientData || !latestVisit) {
+  if (!patientData) {
     return <div className="p-4">Loading invoice...</div>;
   }
+
+  // Create a default visit if no visits exist
+  const defaultVisit = {
+    id: 'default-visit',
+    visit_id: 'VISIT-2024-0001',
+    patient_unique_id: patientData.unique_id || patientData.patient_unique_id,
+    visit_date: new Date().toISOString(),
+    visit_type: 'General',
+    appointment_with: 'Dr. Default',
+    visit_reason: 'General consultation',
+    referring_doctor: 'Self',
+    diagnosis: 'General examination',
+    surgery: '',
+    created_at: new Date().toISOString(),
+    claim_id: 'CLAIM-2024-0001'
+  };
+
+  const currentVisit = latestVisit || defaultVisit;
 
   // Calculate total
   const calculateTotal = () => {
@@ -868,7 +886,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
       {/* Patient Information */}
       <div className="flex justify-between patient-info" style={{ marginTop: '8px', marginBottom: '8px' }}>
         <div style={{ width: '48%' }}>
-          <div><strong>BILL NO</strong>: {formatBillNumber(latestVisit.visit_id)}</div>
+          <div><strong>BILL NO</strong>: {formatBillNumber(currentVisit.visit_id)}</div>
           <div><strong>REGISTRATION NO</strong>: {patientData.unique_id || 'IH24D04003'}</div>
           <div><strong>NAME OF PATIENT</strong>: {patientData.name.toUpperCase()}</div>
           <div><strong>AGE</strong>: {patientData.age} YEARS</div>
@@ -1628,16 +1646,21 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
     }
     
     const today = new Date();
-    const formattedDate = today.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+    const visitId = generateVisitId();
     
-    const visit = {
-      visitId: generateVisitId(),
-      date: formattedDate,
-      ...newVisit
+    const visit: Visit = {
+      id: `visit-${Date.now()}`,
+      visit_id: visitId,
+      patient_unique_id: patient.unique_id || patient.patient_unique_id,
+      visit_date: today.toISOString(),
+      visit_type: newVisit.department,
+      appointment_with: newVisit.doctor,
+      visit_reason: newVisit.reason,
+      referring_doctor: 'Self',
+      diagnosis: newVisit.notes || 'General consultation',
+      surgery: '',
+      created_at: today.toISOString(),
+      claim_id: `CLAIM-${Date.now()}`
     };
     
     setVisits([visit, ...visits]);
