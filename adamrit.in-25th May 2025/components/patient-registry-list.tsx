@@ -95,24 +95,37 @@ export function PatientRegistryList() {
 
   // Add new patient
   const handleAddPatient = async (patientData: any) => {
-    const { data, error } = await supabase
-      .from('patients')
-      .insert([patientData])
-      .select();
+    try {
+      console.log("Submitting patient data:", patientData);
+      
+      const { data, error } = await supabase
+        .from('patients')
+        .insert([patientData])
+        .select();
 
-    if (error) {
+      if (error) {
+        console.error("Database error:", error);
+        toast({
+          title: "Error",
+          description: `Failed to add patient: ${error.message}`,
+          variant: "destructive"
+        });
+      } else {
+        console.log("Patient added successfully:", data);
+        toast({
+          title: "Success",
+          description: "Patient added successfully"
+        });
+        fetchPatients();
+        setShowAddPatient(false);
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
       toast({
         title: "Error",
-        description: "Failed to add patient",
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Patient added successfully"
-      });
-      fetchPatients();
-      setShowAddPatient(false);
     }
   };
 

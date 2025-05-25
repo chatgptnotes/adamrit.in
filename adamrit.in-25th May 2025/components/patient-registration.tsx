@@ -58,7 +58,18 @@ export function PatientRegistration({ onClose, onSubmit }: PatientRegistrationPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit(form);
+    try {
+      console.log("Form submission started with data:", form);
+      await onSubmit(form);
+      console.log("Form submission completed successfully");
+    } catch (error) {
+      console.error("Form submission error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit form. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
