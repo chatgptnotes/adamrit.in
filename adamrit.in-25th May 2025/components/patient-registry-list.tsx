@@ -98,16 +98,32 @@ export function PatientRegistryList() {
     try {
       console.log("Submitting patient data:", patientData);
       
+      // Clean the data to match database schema
+      const cleanedData = {
+        ...patientData,
+        // Convert age to number if it's a string
+        age: patientData.age ? parseInt(patientData.age) : null,
+        // Ensure boolean fields are properly set
+        temp_reg: patientData.temp_reg || false,
+        consultant_own: patientData.consultant_own || false,
+        // Remove any undefined or null file fields that might cause issues
+        photo_url: patientData.photo_url instanceof File ? null : patientData.photo_url,
+        referral_letter_url: patientData.referral_letter_url instanceof File ? null : patientData.referral_letter_url,
+      };
+      
+      console.log("Cleaned data for database:", cleanedData);
+      
       const { data, error } = await supabase
         .from('patients')
-        .insert([patientData])
+        .insert([cleanedData])
         .select();
 
       if (error) {
         console.error("Database error:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
         toast({
           title: "Error",
-          description: `Failed to add patient: ${error.message}`,
+          description: `Failed to add patient: ${error.message || error.details || 'Unknown database error'}`,
           variant: "destructive"
         });
       } else {
