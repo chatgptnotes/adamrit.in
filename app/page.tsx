@@ -53,6 +53,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import Link from "next/link"
 import { supabase } from "@/lib/supabase/client"
 import { sendWhatsAppNotification } from "@/lib/whatsapp-notification"
+import SettingsPage from "@/app/settings/page"
 
 // Types
 interface Diagnosis {
@@ -2322,6 +2323,9 @@ export default function Home() {
               )}
             </div>
           </div>
+        )}
+        {activeTab === "settings" && (
+          <SettingsPage />
         )}
       </main>
     </div>
