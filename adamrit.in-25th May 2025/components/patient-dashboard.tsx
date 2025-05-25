@@ -246,19 +246,19 @@ const printStyles = `
   }
 `;
 
-function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, visits }: {
+function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, visits, patientData }: {
   patientId: string,
   diagnoses: Diagnosis[],
   conservativeStart: string,
   conservativeEnd: string,
   surgicalStart: string,
   surgicalEnd: string,
-  visits: Visit[]
+  visits: Visit[],
+  patientData: any
 }) {
   // State for patient and visit data
   const [patientUniqueId, setPatientUniqueId] = useState<string>('');
   const [allVisits, setAllVisits] = useState<Visit[]>([]);
-  const [patientData, setPatientData] = useState<any>(null);
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
 
@@ -273,22 +273,10 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
     return '29935890';
   };
 
-  // Fetch data
+  // Fetch doctors data
   useEffect(() => {
-    async function fetchData() {
+    async function fetchDoctors() {
       try {
-        // Fetch visits
-        const { data: visitsData, error: visitsError } = await supabase
-          .from('visits')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (visitsError) {
-          console.error("Error fetching visits:", visitsError);
-          return;
-        }
-
-        // Fetch doctors
         const { data: doctorsData, error: doctorsError } = await supabase
           .from('doctors')
           .select('*')
@@ -300,34 +288,14 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
           console.log("✅ Successfully fetched doctors:", doctorsData);
           setDoctors(doctorsData || []);
         }
-
-        if (visitsData && visitsData.length > 0) {
-          setAllVisits(visitsData);
-          const latestVisit = visitsData[0];
-          
-          const { data: patientData, error: patientError } = await supabase
-            .from('patients')
-            .select('*')
-            .eq('unique_id', latestVisit.patient_unique_id)
-            .single();
-
-          if (patientError) {
-            console.error("Error fetching patient data:", patientError);
-            return;
-          }
-
-          if (patientData) {
-            setPatientData(patientData);
-            setPatientUniqueId(latestVisit.patient_unique_id);
-          }
-        }
       } catch (err) {
-        console.error("Error in fetchData:", err);
+        console.error("Error fetching doctors:", err);
       }
     }
 
-    fetchData();
-  }, []);
+    fetchDoctors();
+    setAllVisits(visits);
+  }, [visits]);
 
   // Initialize comprehensive invoice items
   useEffect(() => {
@@ -494,7 +462,7 @@ function InvoicePage({ patientId, diagnoses, conservativeStart, conservativeEnd,
     }
   }, [patientData, allVisits, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd]);
 
-  const latestVisit = allVisits[0];
+  const latestVisit = allVisits[0] || visits[0];
 
   if (!patientData || !latestVisit) {
     return <div className="p-4">Loading invoice...</div>;
@@ -2520,6 +2488,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
               surgicalStart={surgicalStart} 
               surgicalEnd={surgicalEnd}
               visits={visits}
+              patientData={patientData}
             />
           </div>
         </div>
