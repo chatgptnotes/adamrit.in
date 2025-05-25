@@ -295,8 +295,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
 
   // Initialize comprehensive invoice items
   useEffect(() => {
-    if (patientData && visits.length > 0) {
-      const latestVisit = visits[0];
+    if (patientData) {
       const items = [
         // Conservative Treatment Section
         { 
