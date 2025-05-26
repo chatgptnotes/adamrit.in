@@ -415,10 +415,43 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
           ]
         },
 
-        // 5) Post-Surgical Accommodation
+        // 5) Other Charges
         {
           type: "main",
           sr: "5)",
+          item: "Other Charges",
+          subItems: [
+            {
+              sr: "i)",
+              item: "ECG",
+              code: "590",
+              rate: 58.00,
+              qty: 1,
+              amount: 58.00
+            },
+            {
+              sr: "ii)",
+              item: "Chest PA view",
+              code: "1608",
+              rate: 63.00,
+              qty: 1,
+              amount: 63.00
+            },
+            {
+              sr: "iii)",
+              item: "RBS",
+              code: "1444",
+              rate: 24.00,
+              qty: 1,
+              amount: 24.00
+            }
+          ]
+        },
+
+        // 6) Post-Surgical Accommodation
+        {
+          type: "main",
+          sr: "6)",
           item: "Post-Surgical Accommodation Charges",
           subItems: [
             {
@@ -432,10 +465,10 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
           ]
         },
 
-        // 6) Implant Charges
+        // 7) Implant Charges
         {
           type: "main",
-          sr: "6)",
+          sr: "7)",
           item: "Implant Charges",
           subItems: [
             {
@@ -540,6 +573,21 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
     });
   };
 
+  // Function to generate Roman numerals
+  const generateRomanNumeral = (num: number): string => {
+    const romanNumerals = [
+      'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x',
+      'xi', 'xii', 'xiii', 'xiv', 'xv', 'xvi', 'xvii', 'xviii', 'xix', 'xx'
+    ];
+    
+    if (num >= 1 && num <= romanNumerals.length) {
+      return romanNumerals[num - 1];
+    }
+    
+    // Fallback for numbers beyond our predefined list
+    return `${num}`;
+  };
+
   // Handler to add new row to a section
   const handleAddRow = (itemIdx: number, sectionType: string) => {
     setInvoiceItems(prevItems => {
@@ -549,7 +597,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
         if (!item.subItems) return item;
         
         const newSubItem = {
-          sr: `${String.fromCharCode(105 + item.subItems.length)})`, // i), ii), iii), etc.
+          sr: `${generateRomanNumeral(item.subItems.length + 1)})`, // i), ii), iii), iv), v), etc.
           item: getDefaultItemName(sectionType),
           code: "",
           rate: getDefaultRate(sectionType),
@@ -1068,8 +1116,9 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                 const sectionType = item.sr === "1)" ? "consultation" : 
                                   item.sr === "2)" ? "accommodation" : 
                                   item.sr === "5)" ? "other" : 
-                                  item.sr === "6)" ? "implant" :
-                                  item.sr === "7)" ? "surgical" : "other";
+                                  item.sr === "6)" ? "accommodation" :
+                                  item.sr === "7)" ? "implant" :
+                                  item.sr === "8)" ? "surgical" : "other";
                 
                 return (
                   <React.Fragment key={idx}>
@@ -1230,7 +1279,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                           <input
                             type="text"
                             value={sub.code || ''}
-                            onChange={sectionType === "implant" ? (e) => {
+                            onChange={(sectionType === "implant" || sectionType === "other") ? (e) => {
                               const newItems = [...invoiceItems];
                               if (newItems[idx].subItems) {
                                 newItems[idx].subItems[subIdx].code = e.target.value;
@@ -1239,7 +1288,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                             } : undefined}
                             className="w-full border-none bg-transparent text-xs text-center p-1"
                             style={{ minHeight: '20px' }}
-                            readOnly={sectionType !== "implant"}
+                            readOnly={sectionType !== "implant" && sectionType !== "other"}
                           />
                         </td>
                         <td className="right-align">
