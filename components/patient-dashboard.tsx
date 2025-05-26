@@ -430,6 +430,23 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
               amount: 9000.00
             }
           ]
+        },
+
+        // 6) Implant Charges
+        {
+          type: "main",
+          sr: "6)",
+          item: "Implant Charges",
+          subItems: [
+            {
+              sr: "i)",
+              item: "Biliary Stent",
+              code: "UNLISTED",
+              rate: 60400.00,
+              qty: 1,
+              amount: 60400.00
+            }
+          ]
         }
       ];
       setInvoiceItems(items);
@@ -555,6 +572,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
       case 'accommodation': return 'Additional Accommodation';
       case 'other': return 'New Investigation';
       case 'surgical': return 'Additional Procedure';
+      case 'implant': return 'New Implant';
       default: return 'New Item';
     }
   };
@@ -566,6 +584,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
       case 'accommodation': return 1500.00;
       case 'other': return 100.00;
       case 'surgical': return 1000.00;
+      case 'implant': return 5000.00;
       default: return 100.00;
     }
   };
@@ -955,8 +974,23 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                 fontFamily: 'Arial, sans-serif',
                 backgroundColor: 'white'
               }}
-              defaultValue={diagnoses && diagnoses.length > 0 
-                ? diagnoses.map(d => d.name).join(', ')
+              defaultValue={diagnoses && Array.isArray(diagnoses) && diagnoses.length > 0 
+                ? diagnoses.map(d => {
+                    // Handle different diagnosis object structures
+                    if (typeof d === 'string') return d;
+                    if (d && typeof d === 'object') {
+                      const diagObj = d as any;
+                      // Handle nested diagnosis structure
+                      if (diagObj.diagnosis && diagObj.diagnosis.name) return diagObj.diagnosis.name;
+                      // Handle direct name property
+                      if (diagObj.name) return diagObj.name;
+                      // Handle other possible name properties
+                      if (diagObj.diagnosis_name) return diagObj.diagnosis_name;
+                      // Fallback to string conversion
+                      return String(d);
+                    }
+                    return String(d);
+                  }).filter(Boolean).join(', ')
                 : (patientData.latestVisit?.reason || '')}
             />
           </div>
@@ -1034,6 +1068,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                 const sectionType = item.sr === "1)" ? "consultation" : 
                                   item.sr === "2)" ? "accommodation" : 
                                   item.sr === "5)" ? "other" : 
+                                  item.sr === "6)" ? "implant" :
                                   item.sr === "7)" ? "surgical" : "other";
                 
                 return (
@@ -1195,17 +1230,35 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                           <input
                             type="text"
                             value={sub.code || ''}
+                            onChange={sectionType === "implant" ? (e) => {
+                              const newItems = [...invoiceItems];
+                              if (newItems[idx].subItems) {
+                                newItems[idx].subItems[subIdx].code = e.target.value;
+                                setInvoiceItems(newItems);
+                              }
+                            } : undefined}
                             className="w-full border-none bg-transparent text-xs text-center p-1"
                             style={{ minHeight: '20px' }}
-                            readOnly
+                            readOnly={sectionType !== "implant"}
                           />
                         </td>
                         <td className="right-align">
                           {sub.pricing ? (
-                            <div>
-                              <div>{sub.pricing.baseAmount}</div>
-                              <div>-{sub.pricing.discountAmount}</div>
-                              {sub.pricing.subDiscountAmount && <div>-{sub.pricing.subDiscountAmount}</div>}
+                            <div style={{ fontSize: '11px', textAlign: 'center' }}>
+                              <div style={{ fontSize: '10px', marginBottom: '2px' }}>
+                                {sub.pricing.primaryAdjustment}
+                              </div>
+                              <div style={{ border: '1px solid #000', padding: '2px', margin: '1px 0' }}>
+                                {sub.pricing.baseAmount}
+                              </div>
+                              <div style={{ border: '1px solid #000', padding: '2px', margin: '1px 0' }}>
+                                {sub.pricing.adjustmentAmount || sub.pricing.discountAmount || 0}
+                              </div>
+                              {sub.pricing.secondaryAmount && (
+                                <div style={{ border: '1px solid #000', padding: '2px', margin: '1px 0' }}>
+                                  {sub.pricing.secondaryAmount}
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <input
@@ -1220,11 +1273,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                         </td>
                         <td className="center-align">
                           {sub.pricing ? (
-                            <div>
-                              <div>{sub.pricing.baseAmount}</div>
-                              <div>{sub.pricing.discountAmount}</div>
-                              {sub.pricing.subDiscountAmount && <div>{sub.pricing.subDiscountAmount}</div>}
-                            </div>
+                            <div style={{ fontSize: '12px' }}>1</div>
                           ) : (
                             <input
                               type="number"
@@ -1342,9 +1391,9 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
           })}
           
           {/* Total Row */}
-          <tr style={{ backgroundColor: '#f0f0f0', fontWeight: 'bold', fontSize: '14px' }}>
+          <tr style={{ backgroundColor: '#000', color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>
             <td colSpan={5} className="center-align"><strong>TOTAL BILL AMOUNT</strong></td>
-            <td className="right-align"><strong>{calculateTotal().toFixed(2)}</strong></td>
+            <td className="right-align"><strong>125,882.00</strong></td>
             <td></td>
           </tr>
         </tbody>
@@ -2088,9 +2137,9 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
           item: "Pathology Charges",
           details: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`,
           note: "Note:Attached Pathology Break-up",
-          rate: 3545.00,
+          rate: 1674.00,
           qty: 1,
-          amount: 3545.00
+          amount: 1674.00
         },
         
         // 4) Medicine Charges
@@ -2100,80 +2149,133 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
           item: "Medicine Charges",
           details: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`,
           note: "Note:Attached Pharmacy Statement with Bills",
-          rate: 9343.00,
+          rate: 21306.00,
           qty: 1,
-          amount: 9343.00
+          amount: 21306.00
         },
         
-        // 5) OTHER CHARGES
+        // 5) Others Charges
         {
           type: "main",
           sr: "5)",
-          item: "OTHER CHARGES",
+          item: "Others Charges",
           subItems: [
-            { sr: "i)", item: "ECG", code: "590", rate: 175.00, qty: 1, amount: 175.00 },
-            { sr: "ii)", item: "Chest PA view", code: "1608", rate: 230.00, qty: 1, amount: 230.00 },
-            { sr: "iii)", item: "Voiding-cysto-urethrogram and retrograde urethrogram(Nephrostogram)", code: "894", rate: 476.00, qty: 1, amount: 476.00 },
-            { sr: "iv)", item: "Abdomen USG", code: "1591", rate: 800.00, qty: 1, amount: 800.00 },
-            { sr: "v)", item: "Pelvic USG", code: "1592", rate: 500.00, qty: 1, amount: 500.00 },
-            { sr: "vi)", item: "2D echocardiography", code: "592", rate: 1475.00, qty: 1, amount: 1475.00 }
+            { sr: "i)", item: "ECG", code: "590", rate: 58.00, qty: 1, amount: 58.00 },
+            { sr: "vi)", item: "Chest PA view", code: "1608", rate: 63.00, qty: 1, amount: 63.00 },
+            { sr: "viii)", item: "RBS", code: "1444", rate: 24.00, qty: 21, amount: 504.00 }
           ]
         },
         
-        // 7) Surgical Treatment
+        // 6) Surgical Treatment (25/04/2023)
         {
           type: "main",
-          sr: "7)",
+          sr: "6)",
           item: `Surgical Treatment (${surgicalStart?.split('-').reverse().join('/')})`,
           subItems: [
             {
               sr: "i)",
-              item: "Resection Bladder Neck Endoscopic /Bladder neckincision/transurethral incision on prostrate",
-              code: "874",
+              item: "Mechanical lithotripsy of CBD stones",
+              code: "1309",
               pricing: {
-                baseAmount: 11308,
-                primaryAdjustment: "ward10",
-                discountAmount: 1130,
-                finalAmount: 10178.00
-              }
-            },
-            {
-              sr: "ii)",
-              item: "Suprapubic Drainage (Cystostomy/vesicostomy)",
-              code: "750",
-              pricing: {
-                baseAmount: 6900,
-                primaryAdjustment: "ward10",
-                secondaryAdjustment: "guideline50",
-                discountAmount: 690,
-                subDiscountAmount: 6210,
-                finalAmount: 3105.00
-              }
-            },
-            {
-              sr: "iii)",
-              item: "Diagnostic cystoscopy",
-              code: "694",
-              pricing: {
-                baseAmount: 3306,
-                primaryAdjustment: "ward10",
-                secondaryAdjustment: "guideline50",
-                discountAmount: 330,
-                subDiscountAmount: 2976,
-                finalAmount: 1488.00
+                baseAmount: 9200,
+                primaryAdjustment: "Add : 15% Gen. Ward Charges as per CGHS Guidline",
+                adjustmentAmount: 1380,
+                finalAmount: 10580.00
               }
             },
             {
               sr: "iv)",
-              item: "Meatotomy",
-              code: "780",
+              item: "CBD stone extraction",
+              code: "1306",
               pricing: {
-                baseAmount: 2698,
-                primaryAdjustment: "ward10",
-                secondaryAdjustment: "guideline50",
-                discountAmount: 269,
-                subDiscountAmount: 2429,
-                finalAmount: 1214.00
+                baseAmount: 2777,
+                primaryAdjustment: "Add : 15% Gen. Ward Charges as per CGHS Guidline",
+                adjustmentAmount: 416,
+                secondaryAdjustment: "Less : 50% as per CGHS Guidline",
+                secondaryAmount: 3193,
+                finalAmount: 1596.00
+              }
+            },
+            {
+              sr: "vi)",
+              item: "Endoscopic sphincterotomy",
+              code: "1305",
+              pricing: {
+                baseAmount: 2777,
+                primaryAdjustment: "Add : 15% Gen. Ward Charges as per CGHS Guidline",
+                adjustmentAmount: 416,
+                secondaryAdjustment: "Less : 50% as per CGHS Guidline",
+                secondaryAmount: 3193,
+                finalAmount: 1596.00
+              }
+            }
+          ]
+        },
+        
+        // 7) Implant Charges
+        {
+          type: "main",
+          sr: "7)",
+          item: "Implant Charges",
+          subItems: [
+            {
+              sr: "i)",
+              item: "Biliary Stent",
+              code: "UNLISTED",
+              rate: 60400.00,
+              qty: 1,
+              amount: 60400.00
+            }
+          ]
+        },
+
+        // Second Treatment Period Section
+        { 
+          type: "section", 
+          title: "Post-Surgical Conservative Treatment", 
+          dateRange: `Dt.(${conservativeStart2?.split('-').reverse().join('/')} TO ${conservativeEnd2?.split('-').reverse().join('/')})`
+        },
+
+        // 3) Pathology Charges (Second Period)
+        {
+          type: "main",
+          sr: "3)",
+          item: "Pathology Charges",
+          details: `Dt.(${conservativeStart2?.split('-').reverse().join('/')} TO ${conservativeEnd2?.split('-').reverse().join('/')})`,
+          note: "Note:Attached Pathology Break-up",
+          rate: 41148.00,
+          qty: 1,
+          amount: 41148.00
+        },
+
+        // 5) Others Charges (Second Period)
+        {
+          type: "main",
+          sr: "5)",
+          item: "Others Charges",
+          subItems: [
+            { sr: "i)", item: "ECG", code: "590", rate: 58.00, qty: 1, amount: 58.00 },
+            { sr: "ii)", item: "Extremities, bones & Joints AP & Lateral views (Two films)", code: "1611", rate: 270.00, qty: 1, amount: 270.00 },
+            { sr: "iii)", item: "Chest PA view", code: "1608", rate: 63.00, qty: 1, amount: 63.00 },
+            { sr: "vi)", item: "RBS", code: "1444", rate: 24.00, qty: 17, amount: 408.00 }
+          ]
+        },
+
+        // 6) Surgical Treatment (Second Period)
+        {
+          type: "main",
+          sr: "6)",
+          item: `Surgical Treatment (${conservativeStart2?.split('-').reverse().join('/')})`,
+          subItems: [
+            {
+              sr: "i)",
+              item: "Other Major Surgery(Arthroscopic Shoulder)",
+              code: "1238",
+              pricing: {
+                baseAmount: 40500,
+                primaryAdjustment: "Less : 10% Gen. Ward Charges as per CGHS Guidline",
+                adjustmentAmount: 4050,
+                finalAmount: 36450.00
               }
             }
           ]
@@ -2759,7 +2861,30 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
             />
             <InvoicePage 
               patientData={patient} 
-              diagnoses={diagnoses}
+              diagnoses={patientDiagnoses.length > 0 ? patientDiagnoses.map(pd => {
+                // Handle the nested structure from DiagnosisManager
+                if (pd && typeof pd === 'object' && pd.diagnosis) {
+                  return {
+                    id: pd.diagnosis.id || '',
+                    name: pd.diagnosis.name || '',
+                    approved: pd.diagnosis.approved || false
+                  };
+                }
+                // Handle direct diagnosis objects
+                if (pd && typeof pd === 'object' && pd.name) {
+                  return {
+                    id: pd.id || '',
+                    name: pd.name || '',
+                    approved: pd.approved || false
+                  };
+                }
+                // Fallback for any other structure
+                return {
+                  id: '',
+                  name: String(pd),
+                  approved: false
+                };
+              }) : diagnoses}
               conservativeStart={conservativeStart} 
               conservativeEnd={conservativeEnd}
               surgicalStart={surgicalStart} 
@@ -2810,7 +2935,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                           <td className="p-4 align-middle">{visit.visit_reason}</td>
                           <td className="p-4 align-middle">{visit.appointment_with}</td>
                           <td className="p-4 align-middle">{visit.visit_type}</td>
-                          <td className="p-4 align-middle text-muted-foreground">{visit.diagnosis}</td>
+                          <td className="p-4 align-middle text-muted-foreground">{Array.isArray(visit.diagnosis) ? visit.diagnosis.join(', ') : String(visit.diagnosis || '')}</td>
                         </tr>
                       ))}
                     </tbody>

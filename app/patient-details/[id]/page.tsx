@@ -108,7 +108,7 @@ export default function PatientDetails() {
           <ul className="space-y-2">
             {allDiagnoses.map((diag: any) => (
               <li key={diag.id} className="p-2 border rounded hover:bg-blue-50 cursor-pointer">
-                {diag.name} {diag.diagnosis_id ? `(${diag.diagnosis_id})` : ''}
+                {diag.name} {diag.diagnosis_id ? `(${String(diag.diagnosis_id)})` : ''}
               </li>
             ))}
           </ul>

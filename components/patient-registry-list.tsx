@@ -311,8 +311,10 @@ export function PatientRegistryList() {
 
   // Function to add a diagnosis to the selection
   const addDiagnosis = (diagnosis: any) => {
-    if (!selectedDiagnoses.includes(diagnosis.diagnosis_id)) {
-      setSelectedDiagnoses([...selectedDiagnoses, diagnosis.diagnosis_id]);
+    // Ensure we only add the diagnosis ID (string), not the entire object
+    const diagnosisId = typeof diagnosis === 'string' ? diagnosis : diagnosis.diagnosis_id || diagnosis.id;
+    if (diagnosisId && !selectedDiagnoses.includes(diagnosisId)) {
+      setSelectedDiagnoses([...selectedDiagnoses, diagnosisId]);
     }
   };
 
@@ -365,7 +367,7 @@ export function PatientRegistryList() {
         visit_reason: visitForm.visitReason,
         reason: visitForm.visitReason, // Also save as reason for compatibility
         referring_doctor: visitForm.referringDoctor,
-        diagnosis: selectedDiagnoses,
+        diagnosis: selectedDiagnoses.map(d => typeof d === 'string' ? d : (d as any)?.diagnosis_id || (d as any)?.id || String(d)),
         surgery: selectedSurgeries,
         claim_id: visitForm.claim_id,
         relation_with_employee: visitForm.relation_with_employee,
@@ -653,16 +655,18 @@ export function PatientRegistryList() {
                     {/* Display selected diagnoses */}
                     <div className="flex flex-wrap gap-2 mb-2">
                       {selectedDiagnoses.map((id, index) => {
-                        const diag = diagnosesList.find(d => d.id === id);
+                        // Ensure id is a string, not an object
+                        const diagnosisId = typeof id === 'string' ? id : (id as any)?.diagnosis_id || (id as any)?.id || String(id);
+                        const diag = diagnosesList.find(d => d.id === diagnosisId);
                         return (
                           <div
-                            key={`diagnosis-${id}-${index}`}
+                            key={`diagnosis-${diagnosisId}-${index}`}
                             className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md"
                           >
-                            <span>{diag?.name || id}</span>
+                            <span>{diag?.name || diagnosisId}</span>
                             <button
                               type="button"
-                              onClick={() => removeDiagnosis(id)}
+                              onClick={() => removeDiagnosis(diagnosisId)}
                               className="text-blue-600 hover:text-blue-800"
                             >
                               <X size={16} />
@@ -883,7 +887,7 @@ export function PatientRegistryList() {
                     >
                       <div>
                         <div className="font-medium">{diagnosis.name}</div>
-                        <div className="text-sm text-blue-600 mt-1">{diagnosis.diagnosis_id}</div>
+                        <div className="text-sm text-blue-600 mt-1">{String(diagnosis.diagnosis_id || diagnosis.id || '')}</div>
                       </div>
                       <button
                         className="text-blue-600 hover:text-blue-800"

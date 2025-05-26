@@ -303,11 +303,24 @@ export default function Home() {
     fetchComplications()
   }, [])
 
-  // Fetch radiology tests from Supabase on mount
+  // Fetch radiology tests from Supabase investigations table
   useEffect(() => {
     const fetchRadiology = async () => {
-      const { data, error } = await supabase.from('radiology').select('*');
-      if (!error) setRadiology((data as RadiologyTest[]) || []);
+      const { data, error } = await supabase
+        .from('investigations')
+        .select('*')
+        .like('code', 'R-%')
+        .order('code');
+      if (!error) {
+        // Transform the data to match RadiologyTest interface
+        const radiologyData = data?.map(item => ({
+          id: item.id,
+          name: item.name,
+          cost: item.rate?.toString() || '0',
+          code: item.code
+        })) || [];
+        setRadiology(radiologyData);
+      }
     };
     fetchRadiology();
   }, []);
@@ -681,12 +694,32 @@ export default function Home() {
 
   // Handler to add radiology test
   const handleAddRadiology = async (formData: Partial<RadiologyTest>) => {
-    const { data, error } = await supabase.from('radiology').insert([formData]);
+    // Transform the data to match investigations table structure
+    const investigationData = {
+      name: formData.name,
+      code: formData.code,
+      rate: parseFloat(formData.cost || '0')
+    };
+
+    const { data, error } = await supabase.from('investigations').insert([investigationData]);
     if (error) {
       window.alert("Error adding test: " + error.message);
     } else {
-      const { data: newTests } = await supabase.from('radiology').select('*');
-      setRadiology((newTests as RadiologyTest[]) || []);
+      // Refresh the radiology list
+      const { data: newTests } = await supabase
+        .from('investigations')
+        .select('*')
+        .like('code', 'R-%')
+        .order('code');
+      if (newTests) {
+        const radiologyData = newTests.map(item => ({
+          id: item.id,
+          name: item.name,
+          cost: item.rate?.toString() || '0',
+          code: item.code
+        }));
+        setRadiology(radiologyData);
+      }
       setShowAddRadiology(false);
       window.alert("Radiology Test Added Successfully!");
     }
@@ -694,12 +727,32 @@ export default function Home() {
 
   // Handler to update radiology test
   const handleEditRadiology = async (id: string, formData: Partial<RadiologyTest>) => {
-    const { data, error } = await supabase.from('radiology').update(formData).eq('id', id);
+    // Transform the data to match investigations table structure
+    const investigationData = {
+      name: formData.name,
+      code: formData.code,
+      rate: parseFloat(formData.cost || '0')
+    };
+
+    const { data, error } = await supabase.from('investigations').update(investigationData).eq('id', id);
     if (error) {
       window.alert("Error updating test: " + error.message);
     } else {
-      const { data: newTests } = await supabase.from('radiology').select('*');
-      setRadiology((newTests as RadiologyTest[]) || []);
+      // Refresh the radiology list
+      const { data: newTests } = await supabase
+        .from('investigations')
+        .select('*')
+        .like('code', 'R-%')
+        .order('code');
+      if (newTests) {
+        const radiologyData = newTests.map(item => ({
+          id: item.id,
+          name: item.name,
+          cost: item.rate?.toString() || '0',
+          code: item.code
+        }));
+        setRadiology(radiologyData);
+      }
       setEditRadiology(null);
       window.alert("Radiology Test Updated Successfully!");
     }
@@ -708,12 +761,25 @@ export default function Home() {
   // Handler to delete radiology test
   const handleDeleteRadiology = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this test?")) return;
-    const { error } = await supabase.from('radiology').delete().eq('id', id);
+    const { error } = await supabase.from('investigations').delete().eq('id', id);
     if (error) {
       window.alert("Error deleting test: " + error.message);
     } else {
-      const { data: newTests } = await supabase.from('radiology').select('*');
-      setRadiology((newTests as RadiologyTest[]) || []);
+      // Refresh the radiology list
+      const { data: newTests } = await supabase
+        .from('investigations')
+        .select('*')
+        .like('code', 'R-%')
+        .order('code');
+      if (newTests) {
+        const radiologyData = newTests.map(item => ({
+          id: item.id,
+          name: item.name,
+          cost: item.rate?.toString() || '0',
+          code: item.code
+        }));
+        setRadiology(radiologyData);
+      }
     }
   };
 
