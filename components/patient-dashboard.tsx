@@ -66,6 +66,7 @@ import {
 import { supabase } from "@/lib/supabase/client"; // Make sure this import is correct
 import { TreatmentDates } from './treatment-dates';
 import { getPatientVisits, Visit as VisitData } from '@/lib/supabase/api/visits';
+import SurgicalPricingAdjuster from "@/components/SurgicalPricingAdjuster";
 
 // Mock patient data
 const patientData = {
@@ -186,10 +187,18 @@ interface InvoiceSubItem {
   sr: string;
   item: string;
   code?: string;
-  rate: string;
-  qty: number;
-  amount: string;
   details?: string;
+  rate?: number;
+  qty?: number;
+  amount?: number;
+  pricing?: {
+    baseAmount: number;
+    primaryAdjustment: string;
+    discountAmount: number;
+    finalAmount: number;
+    secondaryAdjustment?: string;
+    subDiscountAmount?: number;
+  };
 }
 
 interface InvoiceItem {
@@ -197,11 +206,11 @@ interface InvoiceItem {
   sr?: string;
   item?: string;
   code?: string;
-  rate?: string;
+  rate?: number;
   qty?: number;
-  amount?: string;
+  amount?: number;
   details?: string;
-  sub?: InvoiceSubItem[];
+  subItems?: InvoiceSubItem[];
 }
 
 // Add print styles as a constant
@@ -298,28 +307,26 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
   // Initialize comprehensive invoice items
   useEffect(() => {
     if (patientData) {
-      const items = [
+      // 1. Gather all surgical subItems with pricing from all sections
+      const allItems = [
         // Pre-Surgical Conservative Treatment Section
         { 
           type: "section", 
           title: "Pre-Surgical Conservative Treatment", 
           dateRange: `Dt.(${conservativeStart?.split('-').reverse().join('/')} TO ${conservativeEnd?.split('-').reverse().join('/')})`
         },
-        
         // Surgical Package Section
         { 
           type: "section", 
           title: "Surgical Package (5 Days)", 
           dateRange: `Dt.(${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`
         },
-        
         // Post-Surgical Conservative Treatment Section
         { 
           type: "section", 
           title: "Post-Surgical Conservative Treatment", 
           dateRange: `Dt.(${conservativeStart2?.split('-').reverse().join('/')} TO ${conservativeEnd2?.split('-').reverse().join('/')})`
         },
-        
         // 1) Consultation for Inpatients (Pre-Surgical)
         {
           type: "main",
@@ -345,7 +352,6 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
             }
           ]
         },
-        
         // 2) Pre-Surgical Accommodation Charges
         {
           type: "main",
@@ -362,33 +368,6 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
             }
           ]
         },
-        
-        // 3) Surgical Package Charges
-        {
-          type: "main",
-          sr: "3)",
-          item: "Surgical Package Charges",
-          details: `Dt.(${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`,
-          subItems: [
-            {
-              sr: "i)",
-              item: "Surgery Charges",
-              details: `Dt.(${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`,
-              rate: 25000.00,
-              qty: 1,
-              amount: 25000.00
-            },
-            {
-              sr: "ii)",
-              item: "OT Charges",
-              details: `Dt.(${surgicalStart?.split('-').reverse().join('/')} TO ${surgicalEnd?.split('-').reverse().join('/')})`,
-              rate: 15000.00,
-              qty: 1,
-              amount: 15000.00
-            }
-          ]
-        },
-        
         // 4) Post-Surgical Consultation
         {
           type: "main",
@@ -414,7 +393,6 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
             }
           ]
         },
-
         // 5) Other Charges
         {
           type: "main",
@@ -447,7 +425,6 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
             }
           ]
         },
-
         // 6) Post-Surgical Accommodation
         {
           type: "main",
@@ -464,7 +441,6 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
             }
           ]
         },
-
         // 7) Implant Charges
         {
           type: "main",
@@ -482,7 +458,70 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
           ]
         }
       ];
-      setInvoiceItems(items);
+
+      // 2. Define all surgical procedures with pricing (example data, replace with dynamic if needed)
+      const surgicalProcedures = [
+        {
+          sr: "i)",
+          item: "Resection Bladder Neck Endoscopic /Bladder neck incision/transurethral incision on prostate",
+          code: "874",
+          pricing: {
+            baseAmount: 11308,
+            primaryAdjustment: "ward10",
+            discountAmount: 1130,
+            finalAmount: 10178.00
+          }
+        },
+        {
+          sr: "ii)",
+          item: "Suprapubic Drainage (Cystostomy/vesicostomy)",
+          code: "750",
+          pricing: {
+            baseAmount: 6900,
+            primaryAdjustment: "ward10",
+            secondaryAdjustment: "guideline50",
+            discountAmount: 690,
+            subDiscountAmount: 6210,
+            finalAmount: 3105.00
+          }
+        },
+        {
+          sr: "iii)",
+          item: "Diagnostic cystoscopy",
+          code: "694",
+          pricing: {
+            baseAmount: 3306,
+            primaryAdjustment: "ward10",
+            secondaryAdjustment: "guideline50",
+            discountAmount: 330,
+            subDiscountAmount: 2976,
+            finalAmount: 1488.00
+          }
+        },
+        {
+          sr: "iv)",
+          item: "Meatotomy",
+          code: "780",
+          pricing: {
+            baseAmount: 2698,
+            primaryAdjustment: "ward10",
+            secondaryAdjustment: "guideline50",
+            discountAmount: 269,
+            subDiscountAmount: 2429,
+            finalAmount: 1214.00
+          }
+        }
+      ];
+
+      // 3. Add a dedicated Surgical Treatment section
+      allItems.push({
+        type: "main",
+        sr: "8)",
+        item: `Surgical Treatment (${surgicalStart?.split('-').reverse().join('/')})`,
+        subItems: surgicalProcedures
+      });
+
+      setInvoiceItems(allItems);
     }
   }, [patientData, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, conservativeStart2, conservativeEnd2]);
 
@@ -1220,59 +1259,13 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                           
                           {/* Complex pricing for surgical items */}
                           {sub.pricing && (
-                            <div className="surgery-pricing" style={{ marginTop: '4px' }}>
-                              <div>Base Amount: {sub.pricing.baseAmount}</div>
-                              
-                              {/* Primary Adjustment Dropdown */}
-                              <div style={{ marginTop: '2px' }}>
-                                <select
-                                  value={sub.pricing.primaryAdjustment || 'none'}
-                                  onChange={(e) => handleCGHSAdjustmentChange(idx, subIdx, 'primary', e.target.value)}
-                                  className="text-xs border rounded px-1 py-0.5 w-full"
-                                  style={{ fontSize: '10px' }}
-                                >
-                                  {cghsAdjustmentOptions.map(option => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                {sub.pricing.discountAmount > 0 && (
-                                  <div style={{ fontSize: '10px', color: '#dc2626' }}>
-                                    -{sub.pricing.discountAmount}
-                                  </div>
-                                )}
-                                {sub.pricing.additionAmount > 0 && (
-                                  <div style={{ fontSize: '10px', color: '#059669' }}>
-                                    +{sub.pricing.additionAmount}
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Secondary Adjustment Dropdown */}
-                              {sub.pricing.primaryAdjustment && sub.pricing.primaryAdjustment !== 'none' && (
-                                <div style={{ marginTop: '2px' }}>
-                                  <select
-                                    value={sub.pricing.secondaryAdjustment || 'none'}
-                                    onChange={(e) => handleCGHSAdjustmentChange(idx, subIdx, 'secondary', e.target.value)}
-                                    className="text-xs border rounded px-1 py-0.5 w-full"
-                                    style={{ fontSize: '10px' }}
-                                  >
-                                    <option value="none">No Additional Adjustment</option>
-                                    {cghsAdjustmentOptions.filter(opt => opt.type === 'discount').map(option => (
-                                      <option key={option.value} value={option.value}>
-                                        {option.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  {sub.pricing.subDiscountAmount > 0 && (
-                                    <div style={{ fontSize: '10px', color: '#dc2626' }}>
-                                      -{sub.pricing.subDiscountAmount}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                            <SurgicalPricingAdjuster
+                              pricing={sub.pricing}
+                              cghsAdjustmentOptions={cghsAdjustmentOptions}
+                              onAdjustmentChange={handleCGHSAdjustmentChange}
+                              itemIdx={idx}
+                              subIdx={subIdx}
+                            />
                           )}
                         </td>
                         <td className="center-align">
@@ -1606,7 +1599,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
 
     fetchVisits();
   }, [patient.unique_id]);
-
+  
   // Patient image state
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [patientImage, setPatientImage] = useState<string | null>(null);
@@ -2779,7 +2772,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                     <button
                       key={tab}
                       className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 border ${
-                        selectedInvTab === tab.toLowerCase()
+                        selectedInvTab === tab.toLowerCase() 
                           ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                           : 'bg-white hover:bg-blue-50 text-blue-700 border-blue-200 hover:shadow-sm'
                       }`}
@@ -2799,7 +2792,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                       <button
                         key={day}
                         className={`px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 border ${
-                          selectedInvDay === day
+                          selectedInvDay === day 
                             ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                             : 'bg-white hover:bg-blue-50 text-blue-700 border-blue-200 hover:shadow-sm'
                         }`}
@@ -2853,7 +2846,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
                           <button
                             key={day}
                             className={`px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 border ${
-                              selectedMedDay === day
+                              selectedMedDay === day 
                                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                                 : 'bg-white hover:bg-blue-50 text-blue-700 border-blue-200 hover:shadow-sm'
                             }`}
