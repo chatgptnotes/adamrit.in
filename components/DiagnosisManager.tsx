@@ -161,6 +161,10 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
   const surgerySearchRef = useRef<HTMLDivElement>(null);
   const complicationSearchRef = useRef<HTMLDivElement>(null);
 
+  // New states for edit functionality
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
+
   // Fetch data on component mount
   useEffect(() => {
     fetchDiagnoses();
@@ -236,17 +240,14 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
   const fetchComplications = async () => {
     try {
       const { data, error } = await supabase
-        .from('complications')
+        .from('complication')
         .select('*')
-        .eq('is_active', true)
         .order('name');
-      
       if (error) {
         console.log('Complications table not available:', error.message);
         setComplications([]);
         return;
       }
-      
       setComplications(data || []);
     } catch (error) {
       console.log('Complications table not yet set up, using empty state');
@@ -300,14 +301,14 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
   );
 
   const filteredSurgeries = surgeries.filter(surgery =>
-    surgery.name.toLowerCase().includes(surgerySearch.toLowerCase()) ||
-    surgery.code.toLowerCase().includes(surgerySearch.toLowerCase())
+    (surgery.name && surgery.name.toLowerCase().includes(surgerySearch.toLowerCase())) ||
+    (surgery.code && surgery.code.toLowerCase().includes(surgerySearch.toLowerCase()))
   );
 
   const filteredComplications = complications.filter(complication =>
-    complication.name.toLowerCase().includes(complicationSearch.toLowerCase()) ||
-    complication.category.toLowerCase().includes(complicationSearch.toLowerCase()) ||
-    complication.severity.toLowerCase().includes(complicationSearch.toLowerCase())
+    (complication.name && complication.name.toLowerCase().includes(complicationSearch.toLowerCase())) ||
+    (complication.category && complication.category.toLowerCase().includes(complicationSearch.toLowerCase())) ||
+    (complication.severity && complication.severity.toLowerCase().includes(complicationSearch.toLowerCase()))
   );
 
   // Add functions
@@ -533,22 +534,26 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
       const billNumber = `BL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Date.now()}`;
       
       // Create the main billing record
+      const billingInsertData = {
+        patient_unique_id: patientUniqueId,
+        visit_id: visitId || `VISIT-${Date.now()}`,
+        bill_number: billNumber,
+        patient_name: 'Patient Name', // You can get this from patient data
+        bill_date: new Date().toISOString().split('T')[0],
+        status: 'draft',
+        primary_diagnosis: patientDiagnoses.map(d => d.diagnosis.name).join(', ')
+      };
       const { data: billingData, error: billingError } = await supabase
         .from('patient_billing')
-        .insert({
-          patient_unique_id: patientUniqueId,
-          visit_id: visitId || `VISIT-${Date.now()}`,
-          bill_number: billNumber,
-          patient_name: 'Patient Name', // You can get this from patient data
-          bill_date: new Date().toISOString().split('T')[0],
-          status: 'draft',
-          primary_diagnosis: patientDiagnoses.map(d => d.diagnosis.name).join(', ')
-        })
+        .insert(billingInsertData)
         .select()
         .single();
 
-      if (billingError) throw billingError;
+      console.log('Billing insert data:', billingInsertData);
+      console.error('Billing insert error:', billingError);
+      console.log('Billing insert response:', billingData);
       
+      if (billingError) throw billingError;
       const billingIdLocal = billingData.id;
       setBillingId(billingIdLocal);
 
@@ -556,7 +561,6 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
       if (patientDiagnoses.length > 0) {
         const diagnosesToSave = patientDiagnoses.map(d => ({
           billing_id: billingIdLocal,
-          patient_unique_id: patientUniqueId,
           diagnosis_id: d.diagnosis.id,
           diagnosis_name: d.diagnosis.name,
           status: d.status,
@@ -564,10 +568,12 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
           notes: d.notes || ''
         }));
 
-        const { error: diagnosisError } = await supabase
+        const { error: diagnosisError, data: diagnosisData } = await supabase
           .from('billing_diagnoses')
           .insert(diagnosesToSave);
-
+        console.log('Billing diagnoses insert data:', diagnosesToSave);
+        console.error('Billing diagnoses insert error:', diagnosisError);
+        console.log('Billing diagnoses insert response:', diagnosisData);
         if (diagnosisError) throw diagnosisError;
       }
 
@@ -585,10 +591,12 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
           surgery_date: new Date().toISOString().split('T')[0]
         }));
 
-        const { error: surgeryError } = await supabase
+        const { error: surgeryError, data: surgeryData } = await supabase
           .from('billing_surgeries')
           .insert(surgeriesToSave);
-
+        console.log('Billing surgeries insert data:', surgeriesToSave);
+        console.error('Billing surgeries insert error:', surgeryError);
+        console.log('Billing surgeries insert response:', surgeryData);
         if (surgeryError) throw surgeryError;
       }
 
@@ -603,10 +611,12 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
           occurred_date: c.occurred_date
         }));
 
-        const { error: complicationError } = await supabase
+        const { error: complicationError, data: complicationData } = await supabase
           .from('billing_complications')
           .insert(complicationsToSave);
-
+        console.log('Billing complications insert data:', complicationsToSave);
+        console.error('Billing complications insert error:', complicationError);
+        console.log('Billing complications insert response:', complicationData);
         if (complicationError) throw complicationError;
       }
 
@@ -710,10 +720,8 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
                           variant="ghost"
                           className="h-7 w-7 p-0"
                           onClick={() => {
-                            toast({
-                              title: "Edit Billing",
-                              description: "Edit functionality coming soon",
-                            });
+                            setEditingRecord(record);
+                            setShowEditModal(true);
                           }}
                         >
                           <Edit2 className="h-3.5 w-3.5 text-blue-600" />
