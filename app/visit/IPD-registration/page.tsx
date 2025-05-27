@@ -76,9 +76,9 @@ export default function RegisterNewIPDVisit() {
         title: "Success",
         description: "IPD visit registered successfully"
       });
-      
-      // Redirect to patient dashboard
-      router.push("/?tab=today-ipd-dashboard")
+    
+    // Redirect to patient dashboard
+    router.push("/?tab=today-ipd-dashboard")
     } catch (err) {
       console.error("Error registering IPD visit:", err);
       toast({
@@ -168,9 +168,9 @@ export default function RegisterNewIPDVisit() {
                 placeholder="Enter the reason for visit"
                 value={formData.visitReason}
                 onChange={(e) => handleChange("visitReason", e.target.value)}
-                required
+                  required
                 className="w-full"
-              />
+                />
             </div>
           </div>
         </div>
@@ -179,14 +179,14 @@ export default function RegisterNewIPDVisit() {
         <div className="mb-8">
           <div className="bg-blue-50 p-4 rounded-md mb-4">
             <h2 className="text-xl text-blue-700 font-bold">Additional Details</h2>
-          </div>
-          
+            </div>
+            
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block mb-2 font-medium">
                 Claim ID
               </label>
-              <Input 
+                <Input 
                 placeholder="Enter claim ID"
                 value={formData.claim_id}
                 onChange={(e) => handleChange("claim_id", e.target.value)}

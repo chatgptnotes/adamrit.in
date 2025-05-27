@@ -99,7 +99,7 @@ export function PatientRegistryList() {
   const handleAddPatient = async (patientData: any) => {
     try {
       console.log("Submitting patient data:", patientData);
-      
+
       // Clean the data to match database schema
       const cleanedData = {
         ...patientData,

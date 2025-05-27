@@ -1238,17 +1238,17 @@ export default function Home() {
                   {updates && updates.length > 0 ? (
                     updates.map((commit, idx) => (
                       <div key={commit.sha} className="bg-white rounded-lg p-4 shadow-sm border border-blue-100">
-                        <div className="flex items-start gap-3">
-                          <div className="bg-green-100 rounded-full p-2 mt-1">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          </div>
-                          <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-green-100 rounded-full p-2 mt-1">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="flex-1">
                             <h3 className="font-semibold text-gray-800">{commit.commit.message.split("\n")[0]}</h3>
                             <p className="text-xs text-gray-500 mt-1">By {commit.commit.author.name} on {new Date(commit.commit.author.date).toLocaleDateString()}</p>
                             <a href={commit.html_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">View Commit</a>
-                          </div>
-                        </div>
                       </div>
+                    </div>
+                  </div>
                     ))
                   ) : loadingUpdates ? (
                     <div className="text-center text-blue-600">Loading updates...</div>
@@ -1403,6 +1403,13 @@ export default function Home() {
             )}
             {editDiagnosis && (
               <AddDiagnosisForm
+                initialData={{
+                  name: editDiagnosis.name || "",
+                  complication1: editDiagnosis.complication1 || "none",
+                  complication2: editDiagnosis.complication2 || "none",
+                  complication3: editDiagnosis.complication3 || "none",
+                  complication4: editDiagnosis.complication4 || "none"
+                }}
                 onCancel={() => setEditDiagnosis(null)}
                 onSubmit={(name: string, formData: Partial<Diagnosis> | undefined) => handleEditDiagnosis(editDiagnosis.id, name, formData)}
               />

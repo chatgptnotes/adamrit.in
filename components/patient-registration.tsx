@@ -12,16 +12,16 @@ interface PatientRegistrationProps {
 export function PatientRegistration({ onClose, onSubmit }: PatientRegistrationProps) {
   const [form, setForm] = useState({
     // Required fields with defaults
-    name: "",
-    age: "",
+      name: "",
+      age: "",
     gender: "",
     registration_date: new Date().toISOString().split('T')[0],
     patient_id: "",
     unique_id: "",
     patient_unique_id: "",
     // Optional fields
-    phone: "",
-    address: "",
+      phone: "",
+      address: "",
     emergency_contact_name: "",
     emergency_contact_mobile: "",
     second_emergency_contact_name: "",
@@ -47,7 +47,7 @@ export function PatientRegistration({ onClose, onSubmit }: PatientRegistrationPr
     relative_phone: "",
     instructions: "",
     identity_type: "",
-    email: "",
+      email: "",
     fax: "",
     privilege_card: "",
     billing_link: "",

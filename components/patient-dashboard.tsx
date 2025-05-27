@@ -404,7 +404,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
               item: "ECG",
               code: "590",
               rate: 58.00,
-              qty: 1,
+          qty: 1,
               amount: 58.00
             },
             {
@@ -414,7 +414,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
               rate: 63.00,
               qty: 1,
               amount: 63.00
-            },
+        },
             {
               sr: "iii)",
               item: "RBS",
@@ -464,58 +464,58 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
         {
           sr: "i)",
           item: "Resection Bladder Neck Endoscopic /Bladder neck incision/transurethral incision on prostate",
-          code: "874",
-          pricing: {
-            baseAmount: 11308,
-            primaryAdjustment: "ward10",
-            discountAmount: 1130,
-            finalAmount: 10178.00
-          }
-        },
-        {
-          sr: "ii)",
-          item: "Suprapubic Drainage (Cystostomy/vesicostomy)",
-          code: "750",
-          pricing: {
-            baseAmount: 6900,
-            primaryAdjustment: "ward10",
-            secondaryAdjustment: "guideline50",
-            discountAmount: 690,
-            subDiscountAmount: 6210,
-            finalAmount: 3105.00
-          }
-        },
-        {
-          sr: "iii)",
-          item: "Diagnostic cystoscopy",
-          code: "694",
-          pricing: {
-            baseAmount: 3306,
-            primaryAdjustment: "ward10",
-            secondaryAdjustment: "guideline50",
-            discountAmount: 330,
-            subDiscountAmount: 2976,
-            finalAmount: 1488.00
-          }
-        },
-        {
-          sr: "iv)",
-          item: "Meatotomy",
-          code: "780",
-          pricing: {
-            baseAmount: 2698,
-            primaryAdjustment: "ward10",
-            secondaryAdjustment: "guideline50",
-            discountAmount: 269,
-            subDiscountAmount: 2429,
-            finalAmount: 1214.00
-          }
-        }
+              code: "874",
+              pricing: {
+                baseAmount: 11308,
+                primaryAdjustment: "ward10",
+                discountAmount: 1130,
+                finalAmount: 10178.00
+              }
+            },
+            {
+              sr: "ii)",
+              item: "Suprapubic Drainage (Cystostomy/vesicostomy)",
+              code: "750",
+              pricing: {
+                baseAmount: 6900,
+                primaryAdjustment: "ward10",
+                secondaryAdjustment: "guideline50",
+                discountAmount: 690,
+                subDiscountAmount: 6210,
+                finalAmount: 3105.00
+              }
+            },
+            {
+              sr: "iii)",
+              item: "Diagnostic cystoscopy",
+              code: "694",
+              pricing: {
+                baseAmount: 3306,
+                primaryAdjustment: "ward10",
+                secondaryAdjustment: "guideline50",
+                discountAmount: 330,
+                subDiscountAmount: 2976,
+                finalAmount: 1488.00
+              }
+            },
+            {
+              sr: "iv)",
+              item: "Meatotomy",
+              code: "780",
+              pricing: {
+                baseAmount: 2698,
+                primaryAdjustment: "ward10",
+                secondaryAdjustment: "guideline50",
+                discountAmount: 269,
+                subDiscountAmount: 2429,
+                finalAmount: 1214.00
+              }
+            }
       ];
-
+        
       // 3. Add a dedicated Surgical Treatment section
       allItems.push({
-        type: "main",
+          type: "main",
         sr: "8)",
         item: `Surgical Treatment (${surgicalStart?.split('-').reverse().join('/')})`,
         subItems: surgicalProcedures

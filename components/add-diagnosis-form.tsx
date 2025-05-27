@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
@@ -35,13 +35,17 @@ const availableComplications = [
   { id: "c20", name: "Acute Respiratory Failure", riskLevel: "High" }
 ];
 
+interface AddDiagnosisFormProps {
+  onCancel: () => void;
+  onSubmit: (name: string, formData?: DiagnosisFormData) => void;
+  initialData?: DiagnosisFormData;
+}
+
 export default function AddDiagnosisForm({ 
   onCancel, 
-  onSubmit 
-}: { 
-  onCancel: () => void, 
-  onSubmit: (name: string, formData?: DiagnosisFormData) => void 
-}) {
+  onSubmit,
+  initialData
+}: AddDiagnosisFormProps) {
   const [formData, setFormData] = useState<DiagnosisFormData>({
     name: "",
     complication1: "none",
@@ -49,6 +53,26 @@ export default function AddDiagnosisForm({
     complication3: "none",
     complication4: "none"
   });
+
+  function normalizeComplication(value?: string) {
+    if (!value || value.toLowerCase() === "none") return "none";
+    const found = availableComplications.find(
+      c => c.name.toLowerCase() === value.toLowerCase().trim()
+    );
+    return found ? found.name : "none";
+  }
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || "",
+        complication1: normalizeComplication(initialData.complication1),
+        complication2: normalizeComplication(initialData.complication2),
+        complication3: normalizeComplication(initialData.complication3),
+        complication4: normalizeComplication(initialData.complication4),
+      });
+    }
+  }, [initialData]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

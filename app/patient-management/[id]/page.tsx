@@ -121,7 +121,7 @@ export default function Page() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
+          <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-700">Loading patient data...</h2>
         </div>
       </div>
