@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import EditBillingModal from "@/components/EditBillingModal";
 
 // Types
 interface Diagnosis {
@@ -1234,6 +1235,14 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {showEditModal && editingRecord && (
+        <EditBillingModal
+          record={editingRecord}
+          onClose={() => setShowEditModal(false)}
+          onSave={fetchPatientData}
+        />
       )}
     </div>
   );
