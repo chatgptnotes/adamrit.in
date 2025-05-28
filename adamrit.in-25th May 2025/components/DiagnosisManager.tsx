@@ -646,24 +646,10 @@ export function DiagnosisManager({ patientUniqueId, visitId }: DiagnosisManagerP
             <div className="space-y-3">
               {existingBillingRecords.map((record) => (
                 <div key={record.id} className="bg-white p-4 rounded-lg border">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium text-gray-900">Bill #{String(record.bill_number || '')}</h4>
-                      <p className="text-sm text-gray-600">Claim ID: {String(record.claim_id || 'N/A')}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-green-600">₹{String(record.total_amount || '0')}</p>
-                      <Badge className={`${getStatusColor(String(record.status || 'draft'))} text-xs`}>
-                        {String(record.status || 'draft')}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <p><strong>Primary Diagnosis:</strong> {String(record.primary_diagnosis || 'Not specified')}</p>
-                    <p><strong>Bill Date:</strong> {new Date(record.bill_date || new Date()).toLocaleDateString()}</p>
-                    {record.date_of_admission && (
-                      <p><strong>Admission:</strong> {new Date(record.date_of_admission).toLocaleDateString()}</p>
-                    )}
+                  <div className="text-sm text-gray-600 space-y-2">
+                    <p><strong>Diagnosis:</strong> {String(record.primary_diagnosis || 'Not specified')}</p>
+                    <p><strong>Surgery:</strong> {String(record.surgery_name || 'None')}</p>
+                    <p><strong>Complications:</strong> {String(record.complications || 'None')}</p>
                   </div>
                 </div>
               ))}

@@ -681,39 +681,14 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
                 <div key={record.id} className="bg-white p-3 rounded-lg border group hover:shadow-md transition-shadow">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      {/* Surgery Package as Title with Date */}
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-sm text-gray-900">
-                          {String(record.surgery_package || record.primary_diagnosis || 'General Consultation').toUpperCase()}
-                        </h4>
-                        <span className="text-xs text-gray-500">
-                          {new Date(record.bill_date || new Date()).toLocaleDateString('en-GB')}
-                        </span>
-                      </div>
-                      
-                      {/* Compact info in single line */}
-                      <div className="flex items-center gap-3 text-xs text-gray-600">
-                        <span>Bill #{String(record.bill_number || '').split('-').pop()}</span>
-                        <span>•</span>
-                        <span>Claim: {String(record.claim_id || 'N/A')}</span>
-                        {record.date_of_admission && (
-                          <>
-                            <span>•</span>
-                            <span>Admitted: {new Date(record.date_of_admission).toLocaleDateString('en-GB')}</span>
-                          </>
-                        )}
+                      {/* Display only diagnosis, surgery, and complications */}
+                      <div className="text-sm text-gray-600 space-y-2">
+                        <p><strong>Diagnosis:</strong> {String(record.primary_diagnosis || 'Not specified')}</p>
+                        <p><strong>Surgery:</strong> {String(record.surgery_package || 'None')}</p>
+                        <p><strong>Complications:</strong> {String(record.complications || 'None')}</p>
                       </div>
                     </div>
-                    
-                    {/* Amount, Status and Action Buttons */}
                     <div className="flex items-start gap-2 ml-3">
-                      <div className="text-right">
-                        <p className="font-semibold text-green-600 text-sm">₹{String(record.total_amount || '0')}</p>
-                        <Badge className={`${getStatusColor(String(record.status || 'draft'))} text-xs px-2 py-0.5`}>
-                          {String(record.status || 'draft')}
-                        </Badge>
-                      </div>
-                      
                       {/* Action Buttons */}
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
