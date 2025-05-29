@@ -145,6 +145,8 @@ interface Medication {
   name: string;
   type: string;
   cost: string;
+  speciality?: string;
+  non_nabh_cost?: string;
 }
 
 type Patient = {
@@ -2390,6 +2392,8 @@ export default function Home() {
                     <th className="border px-2 py-1 text-left">Type</th>
                     <th className="border px-2 py-1 text-left">Cost</th>
                     <th className="border px-2 py-1 text-left">Actions</th>
+                    <th className="border px-2 py-1 text-left">speciality</th>
+                    <th className="border px-2 py-1 text-left">Non NABH Cost</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2398,15 +2402,18 @@ export default function Home() {
                       <td className="border px-2 py-1">{med.name}</td>
                       <td className="border px-2 py-1">{med.type}</td>
                       <td className="border px-2 py-1">{med.cost}</td>
+                      <td className="border px-2 py-1">{med.speciality}</td>
+                      <td className="border px-2 py-1">{med.non_nabh_cost}</td>
                       <td className="border px-2 py-1 flex gap-2">
-                        <button title="View">👁️</button>
-                        <button title="Edit" onClick={() => setEditMedication(med)}>✏️</button>
-                        <button title="Delete" onClick={() => handleDeleteMedication(med.id)}>🗑️</button>
+                        <button title="View">👁</button>
+                        <button title="Edit" onClick={() => setEditMedication(med)}>✏</button>
+                        <button title="Delete" onClick={() => handleDeleteMedication(med.id)}>🗑</button>
                       </td>
+                      
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table>
               <p className="mb-2 text-sm text-gray-500">
                 Showing {medications.length} of {medTotalRows} results
               </p>

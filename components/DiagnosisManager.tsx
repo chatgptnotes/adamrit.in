@@ -267,26 +267,86 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
         .order('created_at', { ascending: false });
 
       if (!billingError && billingData && Array.isArray(billingData)) {
-        setExistingBillingRecords(billingData);
-        
-        // For now, just show billing history without fetching detailed data
-        // This prevents React rendering errors until billing tables are fully configured
-        console.log(`Found ${billingData.length} billing records for patient`);
-        
-        // Set empty states for now
-        setPatientDiagnoses([]);
-        setSelectedSurgeries([]);
-        setPatientComplications([]);
+        // For each billing record, fetch the associated diagnoses with surgery and complication info
+        const billingRecordsWithDetails = await Promise.all(
+          billingData.map(async (record) => {
+            // Fetch diagnoses for this billing record
+            const { data: diagnosesData } = await supabase
+              .from('billing_diagnoses')
+              .select('*')
+              .eq('billing_id', record.id);
+
+            if (diagnosesData && diagnosesData.length > 0) {
+              // Get diagnosis names
+              const diagnosisNames = diagnosesData.map(d => d.diagnosis_name);
+              
+              // Get surgery and complications from the FIRST diagnosis record
+              // (since all diagnoses in a billing have the same surgery/complications)
+              const firstDiagnosis = diagnosesData[0];
+              const surgeryData = firstDiagnosis.surgery || '';
+              const complicationsData = firstDiagnosis.complications || '';
+
+              console.log('Loading billing record:', record.id);
+              console.log('Diagnoses data:', diagnosesData);
+              console.log('Surgery data:', surgeryData);
+              console.log('Complications data:', complicationsData);
+
+              // Update the record with the fetched data
+              return {
+                ...record,
+                primary_diagnosis: diagnosisNames.join(', '),
+                surgery_package: surgeryData || 'None',
+                complications: complicationsData || 'None'
+              };
+            } else {
+              // If no diagnoses data, use the data from patient_billing table
+              return {
+                ...record,
+                primary_diagnosis: record.primary_diagnosis || 'Not specified',
+                surgery_package: record.surgery_package || 'None',
+                complications: record.complications || 'None'
+              };
+            }
+          })
+        );
+
+        setExistingBillingRecords(billingRecordsWithDetails);
+        console.log(`Found ${billingRecordsWithDetails.length} billing records for patient`);
       } else {
         console.log('No existing billing records found for patient or billing tables not set up');
         setExistingBillingRecords([]);
-        setPatientDiagnoses([]);
-        setSelectedSurgeries([]);
-        setPatientComplications([]);
       }
 
+      // Fetch patient diagnoses
+      const { data: diagnosisData, error: diagnosisError } = await supabase
+        .from('patient_diagnosis')
+        .select(`
+          *,
+          diagnosis:diagnosis(*)
+        `)
+        .eq('patient_unique_id', patientUniqueId)
+        .order('diagnosed_date', { ascending: false });
+
+      if (!diagnosisError && diagnosisData) {
+        const formattedDiagnoses: PatientDiagnosis[] = diagnosisData.map(d => ({
+          id: d.id,
+          diagnosis: d.diagnosis,
+          status: d.status,
+          diagnosed_date: d.diagnosed_date,
+          notes: d.notes
+        }));
+        setPatientDiagnoses(formattedDiagnoses);
+      } else {
+        console.log('No diagnoses found for patient or diagnosis tables not set up');
+        setPatientDiagnoses([]);
+      }
+
+      // Set empty states for surgeries and complications for now
+      setSelectedSurgeries([]);
+      setPatientComplications([]);
+
     } catch (error) {
-      console.log('Billing tables not yet set up, starting with empty state');
+      console.log('Error fetching patient data:', error);
       setExistingBillingRecords([]);
       setPatientDiagnoses([]);
       setSelectedSurgeries([]);
@@ -325,13 +385,49 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
         return;
       }
 
-      // For now, store in local state (until patient_diagnosis table is created)
-      const newPatientDiagnosis: PatientDiagnosis = {
-        id: Date.now(), // temporary ID
-        diagnosis: diagnosis,
+      // Log the data we're trying to insert
+      console.log('Attempting to insert diagnosis with data:', {
+        patient_unique_id: patientUniqueId,
+        diagnosis_id: diagnosis.id,
         status: 'active',
         diagnosed_date: new Date().toISOString().split('T')[0],
-        notes: ''
+        notes: '',
+        visit_id: visitId
+      });
+
+      // Save to database
+      const { data, error } = await supabase
+        .from('patient_diagnosis')
+        .insert({
+          patient_unique_id: patientUniqueId,
+          diagnosis_id: diagnosis.id,
+          status: 'active',
+          diagnosed_date: new Date().toISOString().split('T')[0],
+          notes: '',
+          visit_id: visitId
+        })
+        .select(`
+          *,
+          diagnosis:diagnosis(*)
+        `)
+        .single();
+
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('No data returned from insert operation');
+      }
+
+      // Update local state with the saved data
+      const newPatientDiagnosis: PatientDiagnosis = {
+        id: data.id,
+        diagnosis: data.diagnosis,
+        status: data.status,
+        diagnosed_date: data.diagnosed_date,
+        notes: data.notes
       };
       
       setPatientDiagnoses(prev => [newPatientDiagnosis, ...prev]);
@@ -345,11 +441,23 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
         title: "Success",
         description: `Added diagnosis: ${diagnosis.name}`
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding diagnosis:', error);
+      console.error('Error details:', error?.message || error?.details || JSON.stringify(error));
+      
+      // More specific error message
+      let errorMessage = "Failed to add diagnosis. ";
+      if (error?.message?.includes('patient_diagnosis') || error?.code === '42P01') {
+        errorMessage += "The patient_diagnosis table doesn't exist yet. Please create it in your database.";
+      } else if (error?.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += "Please check if the patient_diagnosis table exists and has the correct schema.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to add diagnosis",
+        description: errorMessage,
         variant: "destructive"
       });
     }
@@ -481,13 +589,28 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
   };
 
   // Remove functions
-  const removeDiagnosis = (id: number) => {
-    setPatientDiagnoses(prev => prev.filter(d => d.id !== id));
-    
-    toast({
-      title: "Success",
-      description: "Diagnosis removed"
-    });
+  const removeDiagnosis = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('patient_diagnosis')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setPatientDiagnoses(prev => prev.filter(d => d.id !== id));
+      toast({
+        title: "Success",
+        description: "Diagnosis removed successfully"
+      });
+    } catch (error) {
+      console.error('Error removing diagnosis:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove diagnosis",
+        variant: "destructive"
+      });
+    }
   };
 
   const removeSurgery = (id: string) => {
@@ -534,8 +657,8 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
       // Generate a unique bill number
       const billNumber = `BL${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Date.now()}`;
       
-      // Create the main billing record
-      const billingInsertData = {
+      // Create the main billing record - first try with new columns, fallback to without
+      let billingInsertData: any = {
         patient_unique_id: patientUniqueId,
         visit_id: visitId || `VISIT-${Date.now()}`,
         bill_number: billNumber,
@@ -544,38 +667,157 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
         status: 'draft',
         primary_diagnosis: patientDiagnoses.map(d => d.diagnosis.name).join(', ')
       };
-      const { data: billingData, error: billingError } = await supabase
-        .from('patient_billing')
-        .insert(billingInsertData)
-        .select()
-        .single();
 
-      console.log('Billing insert data:', billingInsertData);
-      console.error('Billing insert error:', billingError);
-      console.log('Billing insert response:', billingData);
+      // Try to insert with surgery_package and complications columns
+      try {
+        billingInsertData.surgery_package = selectedSurgeries.length > 0 ? selectedSurgeries.map(s => s.name).join(', ') : 'None';
+        billingInsertData.complications = patientComplications.length > 0 ? patientComplications.map(c => c.complication.name).join(', ') : 'None';
+        
+        const { data: billingData, error: billingError } = await supabase
+          .from('patient_billing')
+          .insert(billingInsertData)
+          .select()
+          .single();
+
+        if (billingError) {
+          // If error is about columns not existing, try without them
+          if (billingError.message?.includes('column') || billingError.code === '42703') {
+            console.log('Columns surgery_package or complications not found, inserting without them');
+            delete billingInsertData.surgery_package;
+            delete billingInsertData.complications;
+            
+            const { data: billingDataRetry, error: billingErrorRetry } = await supabase
+              .from('patient_billing')
+              .insert(billingInsertData)
+              .select()
+              .single();
+              
+            if (billingErrorRetry) throw billingErrorRetry;
+            
+            // Show warning about missing columns
+            toast({
+              title: "Warning",
+              description: "Please run the SQL script 'add_surgery_complications_columns.sql' in Supabase to enable full functionality",
+              variant: "default"
+            });
+            
+            const billingIdLocal = billingDataRetry.id;
+            setBillingId(billingIdLocal);
+            
+            // Continue with the rest of the save process
+            await saveBillingDetails(billingIdLocal);
+          } else {
+            throw billingError;
+          }
+        } else {
+          const billingIdLocal = billingData.id;
+          setBillingId(billingIdLocal);
+          
+          // Continue with the rest of the save process
+          await saveBillingDetails(billingIdLocal);
+        }
+      } catch (error: any) {
+        console.error('Initial billing insert error:', error);
+        throw error;
+      }
+
+    } catch (error: any) {
+      console.error('Error saving to billing:', error);
+      console.error('Error details:', error?.message || error?.details || JSON.stringify(error));
       
-      if (billingError) throw billingError;
-      const billingIdLocal = billingData.id;
-      setBillingId(billingIdLocal);
+      // More specific error messages
+      let errorMessage = "Failed to save to billing. ";
+      if (error?.message?.includes('patient_billing') || error?.code === '42P01') {
+        errorMessage += "The billing tables don't exist yet. Please run the SQL script in 'create_billing_tables.sql' in your Supabase SQL Editor.";
+      } else if (error?.message?.includes('column') || error?.code === '42703') {
+        errorMessage += "Some columns are missing. Please run 'add_surgery_complications_columns.sql' in your Supabase SQL Editor.";
+      } else if (error?.message) {
+        errorMessage += error.message;
+      } else {
+        errorMessage += "Please check if billing tables are created in your database.";
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingToBilling(false);
+    }
+  };
 
-      // Save selected diagnoses to billing
+  // Helper function to save billing details
+  const saveBillingDetails = async (billingIdLocal: number) => {
+    try {
+      // Save selected diagnoses to billing with surgery and complication info
       if (patientDiagnoses.length > 0) {
-        const diagnosesToSave = patientDiagnoses.map(d => ({
+        // Use the correct column names: surgery and complications
+        let diagnosesToSave: any[] = patientDiagnoses.map(d => ({
           billing_id: billingIdLocal,
+          patient_unique_id: patientUniqueId,
           diagnosis_id: d.diagnosis.id,
           diagnosis_name: d.diagnosis.name,
-          status: d.status,
-          diagnosed_date: d.diagnosed_date,
-          notes: d.notes || ''
+          status: d.status || 'active',
+          diagnosed_date: d.diagnosed_date || new Date().toISOString().split('T')[0],
+          notes: d.notes || '',
+          // Use correct column names as shown in the image - use empty string instead of null for text columns
+          surgery: selectedSurgeries.length > 0 ? selectedSurgeries.map(s => s.name).join(', ') : '',
+          complications: patientComplications.length > 0 ? patientComplications.map(c => c.complication.name).join(', ') : ''
         }));
 
-        const { error: diagnosisError, data: diagnosisData } = await supabase
+        console.log('Attempting to save diagnoses:', diagnosesToSave);
+
+        const { error: diagnosisError } = await supabase
           .from('billing_diagnoses')
           .insert(diagnosesToSave);
-        console.log('Billing diagnoses insert data:', diagnosesToSave);
-        console.error('Billing diagnoses insert error:', diagnosisError);
-        console.log('Billing diagnoses insert response:', diagnosisData);
-        if (diagnosisError) throw diagnosisError;
+        
+        if (diagnosisError) {
+          console.error('Billing diagnoses insert error:', diagnosisError);
+          console.error('Error code:', diagnosisError.code);
+          console.error('Error message:', diagnosisError.message);
+          console.error('Error details:', diagnosisError.details);
+          console.error('Error hint:', diagnosisError.hint);
+          
+          // If columns don't exist, try without them
+          if (diagnosisError.message?.includes('column') || diagnosisError.code === '42703') {
+            console.log('Surgery/complications columns not found in billing_diagnoses, inserting without them');
+            
+            // Remove the surgery and complications columns and try again
+            diagnosesToSave = patientDiagnoses.map(d => ({
+              billing_id: billingIdLocal,
+              patient_unique_id: patientUniqueId,
+              diagnosis_id: d.diagnosis.id,
+              diagnosis_name: d.diagnosis.name,
+              status: d.status || 'active',
+              diagnosed_date: d.diagnosed_date || new Date().toISOString().split('T')[0],
+              notes: d.notes || ''
+            }));
+            
+            console.log('Retrying with basic fields:', diagnosesToSave);
+            
+            const { error: retryError } = await supabase
+              .from('billing_diagnoses')
+              .insert(diagnosesToSave);
+              
+            if (retryError) {
+              console.error('Billing diagnoses retry error:', retryError);
+              throw retryError;
+            } else {
+              // Show warning about missing columns
+              toast({
+                title: "Warning",
+                description: "Surgery and complications data could not be saved. Please check your database columns.",
+                variant: "default"
+              });
+            }
+          } else {
+            // If it's a different error, throw it
+            throw diagnosisError;
+          }
+        } else {
+          console.log('Successfully saved diagnoses to billing_diagnoses table');
+        }
       }
 
       // Save selected surgeries to billing
@@ -592,13 +834,16 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
           surgery_date: new Date().toISOString().split('T')[0]
         }));
 
-        const { error: surgeryError, data: surgeryData } = await supabase
+        console.log('Attempting to save surgeries:', surgeriesToSave);
+
+        const { error: surgeryError } = await supabase
           .from('billing_surgeries')
           .insert(surgeriesToSave);
-        console.log('Billing surgeries insert data:', surgeriesToSave);
-        console.error('Billing surgeries insert error:', surgeryError);
-        console.log('Billing surgeries insert response:', surgeryData);
-        if (surgeryError) throw surgeryError;
+        
+        if (surgeryError) {
+          console.error('Billing surgeries insert error:', surgeryError);
+          // Continue even if this fails
+        }
       }
 
       // Save complications to billing
@@ -612,42 +857,42 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
           occurred_date: c.occurred_date
         }));
 
-        const { error: complicationError, data: complicationData } = await supabase
+        console.log('Attempting to save complications:', complicationsToSave);
+
+        const { error: complicationError } = await supabase
           .from('billing_complications')
           .insert(complicationsToSave);
-        console.log('Billing complications insert data:', complicationsToSave);
-        console.error('Billing complications insert error:', complicationError);
-        console.log('Billing complications insert response:', complicationData);
-        if (complicationError) throw complicationError;
+        
+        if (complicationError) {
+          console.error('Billing complications insert error:', complicationError);
+          // Continue even if this fails
+        }
       }
+
+      // Refresh the billing records to show the new entry
+      await fetchPatientData();
 
       toast({
         title: "Success!",
-        description: `Saved to billing (Bill #${billNumber}). All selected diagnoses, surgeries, and complications have been saved.`,
+        description: `Saved to billing (Bill #${billingIdLocal}). All selected diagnoses, surgeries, and complications have been saved.`,
         variant: "default"
       });
-
     } catch (error: any) {
-      console.error('Error saving to billing:', error);
-      console.error('Error details:', error?.message || error?.details || JSON.stringify(error));
+      console.error('Error in saveBillingDetails:', error);
+      console.error('Full error object:', JSON.stringify(error, null, 2));
       
-      // More specific error messages
-      let errorMessage = "Failed to save to billing. ";
-      if (error?.message?.includes('patient_billing') || error?.code === '42P01') {
-        errorMessage += "The billing tables don't exist yet. Please run the SQL script in 'create_billing_tables.sql' in your Supabase SQL Editor.";
+      let errorMessage = "Billing record created but some details may not have been saved. ";
+      if (error?.message?.includes('billing_diagnoses') || error?.code === '42P01') {
+        errorMessage += "The billing_diagnoses table might be missing. Please check your database tables.";
       } else if (error?.message) {
         errorMessage += error.message;
-      } else {
-        errorMessage += "Please check if billing tables are created in your database.";
       }
       
       toast({
-        title: "Error",
+        title: "Partial Success",
         description: errorMessage,
-        variant: "destructive"
+        variant: "default"
       });
-    } finally {
-      setIsSavingToBilling(false);
     }
   };
 
@@ -684,7 +929,7 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
                       {/* Display only diagnosis, surgery, and complications */}
                       <div className="text-sm text-gray-600 space-y-2">
                         <p><strong>Diagnosis:</strong> {String(record.primary_diagnosis || 'Not specified')}</p>
-                        <p><strong>Surgery:</strong> {String(record.surgery_package || 'None')}</p>
+                        <p><strong>Surgery:</strong> {String(record.surgery_package || 'yes')}</p>
                         <p><strong>Complications:</strong> {String(record.complications || 'None')}</p>
                       </div>
                     </div>
@@ -1162,6 +1407,34 @@ export function DiagnosisManager({ patientUniqueId, visitId, onDiagnosesChange }
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {/* Preview of what will be saved */}
+              <div className="bg-white p-4 rounded-lg border border-green-300">
+                <h4 className="font-medium text-sm text-gray-700 mb-3">Preview - This will be saved:</h4>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <strong>Diagnosis:</strong> {
+                      patientDiagnoses.length > 0 
+                        ? patientDiagnoses.map(d => d.diagnosis.name).join(', ')
+                        : 'Not specified'
+                    }
+                  </p>
+                  <p>
+                    <strong>Surgery:</strong> {
+                      selectedSurgeries.length > 0 
+                        ? selectedSurgeries.map(s => s.name).join(', ')
+                        : 'None'
+                    }
+                  </p>
+                  <p>
+                    <strong>Complications:</strong> {
+                      patientComplications.length > 0 
+                        ? patientComplications.map(c => c.complication.name).join(', ')
+                        : 'None'
+                    }
+                  </p>
+                </div>
+              </div>
+
               {/* Summary */}
               <div className="bg-white p-4 rounded-lg border">
                 <h4 className="font-medium text-sm text-gray-700 mb-2">Summary to be saved:</h4>

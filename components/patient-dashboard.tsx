@@ -118,11 +118,12 @@ interface Doctor {
   specialization?: string;
 }
 
-export const doctorMasterList: Doctor[] = [
-  { id: 'dr1', name: 'Dr. Dhiraj Gupta MS. (Ortho)', specialization: 'Orthopedics' },
-  { id: 'dr2', name: 'Dr. Ashwin Chinchkhede', specialization: 'MD. Med.' },
-  // Add more doctors here as needed
-];
+// Remove the hardcoded export and make it a state variable instead
+// export const doctorMasterList: Doctor[] = [
+//   { id: 'dr1', name: 'Dr. Dhiraj Gupta MS. (Ortho)', specialization: 'Orthopedics' },
+//   { id: 'dr2', name: 'Dr. Ashwin Chinchkhede', specialization: 'MD. Med.' },
+//   // Add more doctors here as needed
+// ];
 
 // Re-add the surgery data since we still need it
 // Surgery interface to match cghs_surgery table
@@ -279,7 +280,7 @@ const formatClaimId = () => {
   return `BL24D-${day}/${month}`;
 };
 
-function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, conservativeStart2, conservativeEnd2, visits }: {
+function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEnd, surgicalStart, surgicalEnd, conservativeStart2, conservativeEnd2, visits, doctorMasterList }: {
   patientData: Patient,
   diagnoses: Diagnosis[],
   conservativeStart: string,
@@ -288,7 +289,8 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
   surgicalEnd: string,
   conservativeStart2: string,
   conservativeEnd2: string,
-  visits: Visit[]
+  visits: Visit[],
+  doctorMasterList: Doctor[]
 }) {
   // State for invoice data
   const [invoiceItems, setInvoiceItems] = useState<any[]>([]);
@@ -731,14 +733,14 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
   ];
 
   // List of available consultants - now dynamic from database
-  const consultantOptions = doctorMasterList.map(doctor => ({
+  const consultantOptions = doctorMasterList.map((doctor: Doctor) => ({
     value: doctor.id,
     label: `${doctor.name}${doctor.specialization ? ` (${doctor.specialization})` : ''}`
   }));
 
   // Handler to update consultant name
   const handleConsultantChange = (itemIdx: number, subIdx: number, consultantValue: string) => {
-    const selectedConsultant = consultantOptions.find(opt => opt.value === consultantValue);
+    const selectedConsultant = consultantOptions.find((opt: any) => opt.value === consultantValue);
     if (!selectedConsultant) return;
 
     setInvoiceItems((prevItems: any[]) => {
@@ -1240,7 +1242,7 @@ function InvoicePage({ patientData, diagnoses, conservativeStart, conservativeEn
                               style={{ minHeight: '20px' }}
                             >
                               <option value="">Select Doctor</option>
-                              {consultantOptions.map(option => (
+                              {consultantOptions.map((option: any) => (
                                 <option key={option.value} value={option.value}>
                                   {option.label}
                                 </option>
@@ -1528,6 +1530,9 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
       </div>
     );
   }
+
+  // Add state for doctors list
+  const [doctorMasterList, setDoctorMasterList] = useState<Doctor[]>([]);
 
   // Add state variables for treatment dates
   const [conservativeStart, setConservativeStart] = useState('2024-03-04');
@@ -2083,6 +2088,34 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
     setVisits(data || []);
   };
 
+  // Fetch doctors from the doctor table
+  const fetchDoctors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('doctor')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching doctors:', error.message || error);
+        throw error;
+      }
+      
+      // Map the data to match the Doctor interface
+      const mappedDoctors: Doctor[] = (data || []).map((doc: any) => ({
+        id: doc.id || doc.doctor_id || String(doc.id),
+        name: doc.name || '',
+        specialization: doc.specialization || doc.specialty || ''
+      }));
+      
+      setDoctorMasterList(mappedDoctors);
+    } catch (error: any) {
+      console.error('Error fetching doctors:', error?.message || error?.toString() || 'Unknown error occurred');
+      // Set empty array as fallback
+      setDoctorMasterList([]);
+    }
+  };
+
   // Fetch surgeries from cghs_surgery table
   const fetchSurgeries = async () => {
     try {
@@ -2108,6 +2141,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
   useEffect(() => {
     fetchVisits();
     fetchSurgeries();
+    fetchDoctors(); // Add this line to fetch doctors
   }, [patient?.unique_id]);
 
   // Initialize comprehensive invoice items
@@ -2934,6 +2968,7 @@ export function PatientDashboard({ patient }: PatientDashboardProps) {
               conservativeStart2={conservativeStart2}
               conservativeEnd2={conservativeEnd2}
               visits={visits}
+              doctorMasterList={doctorMasterList}
             />
           </div>
         </div>
